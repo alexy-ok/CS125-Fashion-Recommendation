@@ -38,3 +38,12 @@
 .size-fields .chakra-field__label {
   font-size: 0.875rem;
 }
+
+.profile-title-input {
+  min-width: 120px;
+  flex: 1;
+}
+
+.edit-title-btn {
+  flex-shrink: 0;
+}

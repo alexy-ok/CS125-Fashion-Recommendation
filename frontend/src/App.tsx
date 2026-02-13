@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import {
   Accordion,
@@ -7,6 +7,7 @@ import {
   Container,
   Field,
   Heading,
+  IconButton,
   Input,
   NativeSelect,
   RadioGroup,
@@ -14,9 +15,11 @@ import {
   Textarea,
   VStack,
 } from "@chakra-ui/react";
+import { MdEdit } from "react-icons/md";
 
 export interface ClothingProfile {
   id: string;
+  title: string;
   description: string;
   minPrice: string;
   maxPrice: string;
@@ -67,6 +70,7 @@ const PANTS_SIZES = [
 
 const createEmptyProfile = (): ClothingProfile => ({
   id: crypto.randomUUID(),
+  title: "",
   description: "",
   minPrice: "",
   maxPrice: "",
@@ -85,18 +89,78 @@ function StyleProfileAccordionItem({
   index: number;
   onUpdate: (id: string, updates: Partial<ClothingProfile>) => void;
 }) {
-  const title =
-    profile.description.trim().slice(0, 40) ||
-    `Style profile ${index + 1}`;
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(profile.title);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditingTitle) titleInputRef.current?.focus();
+  }, [isEditingTitle]);
+
   const displayTitle =
-    title.length >= 40 ? `${title}…` : title || `Style profile ${index + 1}`;
+    profile.title.trim() || `Style profile ${index + 1}`;
+
+  const handleSaveTitle = () => {
+    onUpdate(profile.id, { title: draftTitle.trim() });
+    setIsEditingTitle(false);
+  };
 
   return (
     <Accordion.Item value={profile.id} className="style-profile-item">
       <Accordion.ItemTrigger className="style-profile-trigger">
-        <Text as="span" fontWeight="medium">
-          {displayTitle}
-        </Text>
+        <Box
+          as="span"
+          display="flex"
+          alignItems="center"
+          gap="2"
+          flex="1"
+          minW="0"
+          onClick={(e: React.MouseEvent) => isEditingTitle && e.stopPropagation()}
+        >
+          {isEditingTitle ? (
+            <Input
+              ref={titleInputRef}
+              size="sm"
+              value={draftTitle}
+              onChange={(e) => setDraftTitle(e.target.value)}
+              onBlur={handleSaveTitle}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleSaveTitle();
+                }
+                if (e.key === "Escape") {
+                  setDraftTitle(profile.title);
+                  setIsEditingTitle(false);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              placeholder={`Style profile ${index + 1}`}
+              className="profile-title-input"
+            />
+          ) : (
+            <Text as="span" fontWeight="medium" truncate>
+              {displayTitle}
+            </Text>
+          )}
+          {!isEditingTitle && (
+            <IconButton
+              aria-label="Edit profile title"
+              size="xs"
+              variant="ghost"
+              flexShrink={0}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDraftTitle(profile.title);
+                setIsEditingTitle(true);
+              }}
+              className="edit-title-btn"
+            >
+              <MdEdit />
+            </IconButton>
+          )}
+        </Box>
         <Accordion.ItemIndicator />
       </Accordion.ItemTrigger>
       <Accordion.ItemContent>

@@ -80,18 +80,53 @@ const createEmptyProfile = (): ClothingProfile => ({
   pantsSize: "",
 });
 
+type ProfileFormDraft = Pick<
+  ClothingProfile,
+  | "description"
+  | "minPrice"
+  | "maxPrice"
+  | "brandPreference"
+  | "material"
+  | "shirtSize"
+  | "pantsSize"
+>;
+
 function StyleProfileAccordionItem({
   profile,
   index,
   onUpdate,
+  onSaveSuccess,
 }: {
   profile: ClothingProfile;
   index: number;
   onUpdate: (id: string, updates: Partial<ClothingProfile>) => void;
+  onSaveSuccess?: () => void;
 }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState(profile.title);
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  const [draft, setDraft] = useState<ProfileFormDraft>(() => ({
+    description: profile.description,
+    minPrice: profile.minPrice,
+    maxPrice: profile.maxPrice,
+    brandPreference: profile.brandPreference,
+    material: profile.material,
+    shirtSize: profile.shirtSize,
+    pantsSize: profile.pantsSize,
+  }));
+
+  useEffect(() => {
+    setDraft({
+      description: profile.description,
+      minPrice: profile.minPrice,
+      maxPrice: profile.maxPrice,
+      brandPreference: profile.brandPreference,
+      material: profile.material,
+      shirtSize: profile.shirtSize,
+      pantsSize: profile.pantsSize,
+    });
+  }, [profile.id, profile.description, profile.minPrice, profile.maxPrice, profile.brandPreference, profile.material, profile.shirtSize, profile.pantsSize]);
 
   useEffect(() => {
     if (isEditingTitle) titleInputRef.current?.focus();
@@ -103,6 +138,11 @@ function StyleProfileAccordionItem({
   const handleSaveTitle = () => {
     onUpdate(profile.id, { title: draftTitle.trim() });
     setIsEditingTitle(false);
+  };
+
+  const handleSaveProfile = () => {
+    onUpdate(profile.id, { ...draft });
+    onSaveSuccess?.();
   };
 
   return (
@@ -170,9 +210,9 @@ function StyleProfileAccordionItem({
               <Field.Label>Description / keywords</Field.Label>
               <Textarea
                 placeholder="e.g. affordable casual essentials, minimal basics..."
-                value={profile.description}
+                value={draft.description}
                 onChange={(e) =>
-                  onUpdate(profile.id, { description: e.target.value })
+                  setDraft((prev) => ({ ...prev, description: e.target.value }))
                 }
                 rows={3}
               />
@@ -192,9 +232,9 @@ function StyleProfileAccordionItem({
                     type="number"
                     placeholder="0"
                     min={0}
-                    value={profile.minPrice}
+                    value={draft.minPrice}
                     onChange={(e) =>
-                      onUpdate(profile.id, { minPrice: e.target.value })
+                      setDraft((prev) => ({ ...prev, minPrice: e.target.value }))
                     }
                   />
                 </Field.Root>
@@ -204,9 +244,9 @@ function StyleProfileAccordionItem({
                     type="number"
                     placeholder="Any"
                     min={0}
-                    value={profile.maxPrice}
+                    value={draft.maxPrice}
                     onChange={(e) =>
-                      onUpdate(profile.id, { maxPrice: e.target.value })
+                      setDraft((prev) => ({ ...prev, maxPrice: e.target.value }))
                     }
                   />
                 </Field.Root>
@@ -216,23 +256,26 @@ function StyleProfileAccordionItem({
             <Field.Root>
               <Field.Label>Brand style (optional)</Field.Label>
               <RadioGroup.Root
-                value={profile.brandPreference ?? ""}
+                value={draft.brandPreference ?? ""}
                 onValueChange={(e) =>
-                  onUpdate(profile.id, {
+                  setDraft((prev) => ({
+                    ...prev,
                     brandPreference: e.value
                       ? (e.value as "high-end" | "casual")
                       : null,
-                  })
+                  }))
                 }
               >
                 <Box display="flex" gap="4" flexWrap="wrap">
-                  <RadioGroup.Item value="high-end">
+                  <RadioGroup.Item as="label" value="high-end" cursor="pointer">
                     <RadioGroup.ItemControl />
                     <RadioGroup.ItemText>High end brand</RadioGroup.ItemText>
+                    <RadioGroup.ItemHiddenInput />
                   </RadioGroup.Item>
-                  <RadioGroup.Item value="casual">
+                  <RadioGroup.Item as="label" value="casual" cursor="pointer">
                     <RadioGroup.ItemControl />
                     <RadioGroup.ItemText>Casual</RadioGroup.ItemText>
+                    <RadioGroup.ItemHiddenInput />
                   </RadioGroup.Item>
                 </Box>
               </RadioGroup.Root>
@@ -242,9 +285,9 @@ function StyleProfileAccordionItem({
               <Field.Label>Main material (optional)</Field.Label>
               <NativeSelect.Root>
                 <NativeSelect.Field
-                  value={profile.material}
+                  value={draft.material}
                   onChange={(e) =>
-                    onUpdate(profile.id, { material: e.target.value })
+                    setDraft((prev) => ({ ...prev, material: e.target.value }))
                   }
                 >
                   {MATERIAL_OPTIONS.map((opt) => (
@@ -262,9 +305,9 @@ function StyleProfileAccordionItem({
                 <Field.Label>Shirt size (optional)</Field.Label>
                 <NativeSelect.Root>
                   <NativeSelect.Field
-                    value={profile.shirtSize}
+                    value={draft.shirtSize}
                     onChange={(e) =>
-                      onUpdate(profile.id, { shirtSize: e.target.value })
+                      setDraft((prev) => ({ ...prev, shirtSize: e.target.value }))
                     }
                   >
                     {SHIRT_SIZES.map((opt) => (
@@ -280,9 +323,9 @@ function StyleProfileAccordionItem({
                 <Field.Label>Pants size (optional)</Field.Label>
                 <NativeSelect.Root>
                   <NativeSelect.Field
-                    value={profile.pantsSize}
+                    value={draft.pantsSize}
                     onChange={(e) =>
-                      onUpdate(profile.id, { pantsSize: e.target.value })
+                      setDraft((prev) => ({ ...prev, pantsSize: e.target.value }))
                     }
                   >
                     {PANTS_SIZES.map((opt) => (
@@ -295,6 +338,15 @@ function StyleProfileAccordionItem({
                 </NativeSelect.Root>
               </Field.Root>
             </Box>
+
+            <Button
+              onClick={handleSaveProfile}
+              colorPalette="blue"
+              alignSelf="flex-start"
+              className="save-profile-btn"
+            >
+              Save
+            </Button>
           </VStack>
         </Accordion.ItemBody>
       </Accordion.ItemContent>
@@ -304,9 +356,12 @@ function StyleProfileAccordionItem({
 
 export default function App() {
   const [profiles, setProfiles] = useState<ClothingProfile[]>([]);
+  const [expandedIds, setExpandedIds] = useState<string[]>([]);
 
   const handleAddProfile = () => {
-    setProfiles((prev) => [...prev, createEmptyProfile()]);
+    const newProfile = createEmptyProfile();
+    setProfiles((prev) => [...prev, newProfile]);
+    setExpandedIds((prev) => [...prev, newProfile.id]);
   };
 
   const handleUpdateProfile = (id: string, updates: Partial<ClothingProfile>) => {
@@ -351,7 +406,8 @@ export default function App() {
           <Accordion.Root
             multiple
             collapsible
-            defaultValue={profiles.length > 0 ? [profiles[0].id] : []}
+            value={expandedIds}
+            onValueChange={(e) => setExpandedIds(e.value ?? [])}
             className="profiles-accordion"
           >
             {profiles.map((profile, index) => (
@@ -360,6 +416,9 @@ export default function App() {
                 profile={profile}
                 index={index}
                 onUpdate={handleUpdateProfile}
+                onSaveSuccess={() =>
+                  setExpandedIds((prev) => prev.filter((id) => id !== profile.id))
+                }
               />
             ))}
           </Accordion.Root>

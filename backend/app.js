@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 const { GoogleGenerativeAI, SchemaType } = require('@google/generative-ai');
+const { searchProducts, getItemDetails } = require('./ebay');
 
 const app = express();
 const PORT = 3000;
@@ -61,6 +62,44 @@ Description: ${description}`;
   } catch (error) {
     console.error('AI score error:', error);
     res.status(500).json({ error: error.message || 'AI scoring failed.' });
+  }
+});
+
+app.get('/search-products', async (req, res) => {
+  try {
+    const { query, limit, categoryId, condition, sortOrder } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ error: 'Query parameter is required' });
+    }
+
+    const options = {
+      limit: parseInt(limit) || 10,
+      categoryId,
+      condition,
+      sortOrder
+    };
+
+    const products = await searchProducts(query, options);
+    res.json({ 
+      query,
+      count: products.length,
+      products 
+    });
+  } catch (error) {
+    console.error('Product search error:', error);
+    res.status(500).json({ error: error.message || 'Product search failed' });
+  }
+});
+
+app.get('/item/:itemId', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const details = await getItemDetails(itemId);
+    res.json(details);
+  } catch (error) {
+    console.error('Item details error:', error);
+    res.status(500).json({ error: error.message || 'Failed to get item details' });
   }
 });
 

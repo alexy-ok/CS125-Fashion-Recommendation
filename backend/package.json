@@ -10,7 +10,9 @@
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "axios": "^1.7.2",
     "dotenv": "^17.2.4",
+    "ebay-oauth-nodejs-client": "^1.2.1",
     "express": "^5.2.1",
     "multer": "^2.0.2"
   }

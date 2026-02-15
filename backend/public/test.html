@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recommendation test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+    label { display: block; margin-top: 0.75rem; font-weight: 500; }
+    input, select { margin-top: 0.25rem; padding: 0.4rem 0.6rem; width: 100%; box-sizing: border-box; }
+    button { margin-top: 1rem; padding: 0.5rem 1rem; cursor: pointer; }
+    #output { margin-top: 1.5rem; white-space: pre-wrap; font-size: 0.9rem; background: #f5f5f5; padding: 1rem; border-radius: 6px; overflow-x: auto; }
+    .row { display: flex; gap: 1rem; }
+    .row > * { flex: 1; }
+  </style>
+</head>
+<body>
+  <h1>Recommendation test</h1>
+  <form id="form">
+    <label for="q">Query (e.g. black jacket)</label>
+    <input type="text" id="q" name="q" placeholder="black jacket">
+
+    <div class="row">
+      <div>
+        <label for="size">Size</label>
+        <input type="text" id="size" name="size" placeholder="M">
+      </div>
+      <div>
+        <label for="category">Category</label>
+        <input type="text" id="category" name="category" placeholder="Jacket">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="minPrice">Min price</label>
+        <input type="number" id="minPrice" name="minPrice" placeholder="0" min="0" step="0.01">
+      </div>
+      <div>
+        <label for="maxPrice">Max price</label>
+        <input type="number" id="maxPrice" name="maxPrice" placeholder="200" min="0" step="0.01">
+      </div>
+    </div>
+    <label for="limit">Limit</label>
+    <input type="number" id="limit" name="limit" value="10" min="1" max="100">
+
+    <button type="submit">Recommend</button>
+  </form>
+  <div id="output">Results will appear here.</div>
+
+  <script>
+    const form = document.getElementById('form');
+    const output = document.getElementById('output');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const params = new URLSearchParams();
+      const q = document.getElementById('q').value.trim();
+      if (q) params.set('q', q);
+      const size = document.getElementById('size').value.trim();
+      if (size) params.set('size', size);
+      const category = document.getElementById('category').value.trim();
+      if (category) params.set('category', category);
+      const minPrice = document.getElementById('minPrice').value.trim();
+      if (minPrice) params.set('minPrice', minPrice);
+      const maxPrice = document.getElementById('maxPrice').value.trim();
+      if (maxPrice) params.set('maxPrice', maxPrice);
+      const limit = document.getElementById('limit').value.trim();
+      if (limit) params.set('limit', limit);
+
+      output.textContent = 'Loading…';
+      try {
+        const res = await fetch('/recommend?' + params.toString());
+        const data = await res.json();
+        if (!res.ok) {
+          output.textContent = 'Error: ' + (data.error || res.status);
+          return;
+        }
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.textContent = 'Request failed: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

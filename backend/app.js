@@ -1,11 +1,22 @@
 require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
+const path = require('path');
 const { GoogleGenerativeAI, SchemaType } = require('@google/generative-ai');
 const { searchProducts, getItemDetails } = require('./ebay');
+const { loadAndBuildIndex } = require('./indexer');
+const { recommend } = require('./recommender');
 
 const app = express();
 const PORT = 3000;
+
+let recommendationIndex = null;
+try {
+  recommendationIndex = loadAndBuildIndex(path.join(__dirname, 'data', 'dataset_1.json'));
+  console.log('Recommendation index loaded:', recommendationIndex.docCount, 'items');
+} catch (e) {
+  console.warn('Could not load recommendation index:', e.message);
+}
 
 const aiScoreResponseSchema = {
   type: SchemaType.OBJECT,
@@ -28,6 +39,7 @@ const model = genAI.getGenerativeModel({
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/ai-score', upload.single('image'), async (req, res) => {
   try {
@@ -100,6 +112,34 @@ app.get('/item/:itemId', async (req, res) => {
   } catch (error) {
     console.error('Item details error:', error);
     res.status(500).json({ error: error.message || 'Failed to get item details' });
+  }
+});
+
+/**
+ * Recommend clothing items from the indexed catalog.
+ * Query params: q (text), size, category, minPrice, maxPrice, limit
+ */
+app.get('/recommend', (req, res) => {
+  try {
+    if (!recommendationIndex) {
+      return res.status(503).json({ error: 'Recommendation index not loaded' });
+    }
+    const { q, size, category, minPrice, maxPrice, limit } = req.query;
+    const results = recommend(recommendationIndex, q || '', {
+      size: size || undefined,
+      category: category || undefined,
+      minPrice: minPrice || undefined,
+      maxPrice: maxPrice || undefined,
+    }, limit ? parseInt(limit, 10) : 20);
+    res.json({
+      query: q || '',
+      filters: { size, category, minPrice, maxPrice },
+      count: results.length,
+      results: results.map(({ item, score }) => ({ item, score })),
+    });
+  } catch (error) {
+    console.error('Recommend error:', error);
+    res.status(500).json({ error: error.message || 'Recommendation failed' });
   }
 });
 

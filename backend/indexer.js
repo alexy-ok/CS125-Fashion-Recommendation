@@ -18,10 +18,11 @@ function tokenize(text) {
 /**
  * Build an inverted index from a list of items.
  * Index maps term -> { docId: count } for scoring (term frequency per document).
+ * Also stores doc lengths and avgdl for BM25.
  * Items are normalized: size -> sizes, image_url -> image_urls, and get a numeric docId.
  *
  * @param {Array<object>} items - Each item: name, description, price, category, sizes/size, etc.
- * @returns {{ items: Array<object>, index: object, docCount: number }}
+ * @returns {{ items: Array<object>, index: object, docCount: number, docLengths: number[], avgdl: number }}
  */
 function buildIndex(items) {
   const normalized = items.map((item, i) => {
@@ -43,10 +44,13 @@ function buildIndex(items) {
 
   /** @type {Record<string, Record<number, number>>} term -> docId -> count */
   const index = {};
+  /** @type {number[]} docLengths[docId] = number of terms in document */
+  const docLengths = [];
 
   for (const doc of normalized) {
     const text = [doc.name, doc.description].filter(Boolean).join(' ');
     const terms = tokenize(text);
+    docLengths[doc.docId] = terms.length;
     const termCounts = {};
     for (const t of terms) {
       termCounts[t] = (termCounts[t] || 0) + 1;
@@ -57,17 +61,22 @@ function buildIndex(items) {
     }
   }
 
+  const totalLen = docLengths.reduce((a, b) => a + b, 0);
+  const avgdl = normalized.length > 0 ? totalLen / normalized.length : 0;
+
   return {
     items: normalized,
     index,
     docCount: normalized.length,
+    docLengths,
+    avgdl,
   };
 }
 
 /**
  * Load items from a JSON file (array of item objects) and build the index.
  * @param {string} filePath - Path to JSON file (e.g. data/dataset_1.json)
- * @returns {{ items: Array<object>, index: object, docCount: number }}
+ * @returns {{ items: Array<object>, index: object, docCount: number, docLengths: number[], avgdl: number }}
  */
 function loadAndBuildIndex(filePath) {
   const absolute = path.isAbsolute(filePath) ? filePath : path.join(__dirname, filePath);

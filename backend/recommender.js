@@ -1,16 +1,28 @@
 const { tokenize } = require('./indexer');
 
+/** BM25 parameters: k1 controls term frequency saturation, b controls length normalization. */
+const BM25_K1 = 1.2;
+const BM25_B = 0.75;
+
 /**
- * Recommend clothing items: text match via inverted index + hard filters (size, price, category), then rank.
+ * BM25 IDF: log((N - n + 0.5) / (n + 0.5) + 1)
+ * N = docCount, n = number of documents containing the term
+ */
+function bm25Idf(docCount, docFreq) {
+  return Math.log((docCount - docFreq + 0.5) / (docFreq + 0.5) + 1);
+}
+
+/**
+ * Recommend clothing items: BM25 text match via inverted index + hard filters (size, price, category), then rank.
  *
- * @param {object} ctx - Index context from indexer.buildIndex / loadAndBuildIndex
+ * @param {object} ctx - Index context from indexer.buildIndex / loadAndBuildIndex (must include docLengths, avgdl)
  * @param {string} query - User search text (e.g. "black jacket")
  * @param {object} filters - Optional: size, category, minPrice, maxPrice
  * @param {number} limit - Max number of results (default 20)
  * @returns {Array<{ item: object, score: number }>}
  */
 function recommend(ctx, query, filters = {}, limit = 20) {
-  const { items, index, docCount } = ctx;
+  const { items, index, docCount, docLengths = [], avgdl = 0 } = ctx;
   const terms = tokenize(query || '');
 
   let candidateIds;
@@ -56,13 +68,15 @@ function recommend(ctx, query, filters = {}, limit = 20) {
 
     let score = 0;
     if (terms.length > 0) {
+      const docLen = docLengths[docId] ?? 0;
+      const norm = avgdl > 0 ? 1 - BM25_B + BM25_B * (docLen / avgdl) : 1;
       for (const term of terms) {
         const postings = index[term];
         if (postings && postings[docId] != null) {
           const tf = postings[docId];
           const df = Object.keys(postings).length;
-          const idf = Math.log((docCount + 1) / (df + 1)) + 1;
-          score += tf * idf;
+          const idf = bm25Idf(docCount, df);
+          score += idf * (tf * (BM25_K1 + 1)) / (tf + BM25_K1 * norm);
         }
       }
     } else {

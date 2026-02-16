@@ -50,3 +50,30 @@
 .edit-title-btn {
   flex-shrink: 0;
 }
+
+.search-section {
+  margin-top: 2rem;
+}
+
+.results-grid {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-item {
+  cursor: pointer;
+}
+
+.result-item img {
+  background: var(--chakra-colors-bg-muted, rgba(0, 0, 0, 0.04));
+}

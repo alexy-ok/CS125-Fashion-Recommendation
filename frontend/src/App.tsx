@@ -7,15 +7,18 @@ import {
   Container,
   Field,
   Heading,
-  IconButton,
   Input,
   NativeSelect,
   RadioGroup,
   Text,
   Textarea,
   VStack,
+  Grid,
+  Spinner,
+  Image,
+  Badge,
 } from "@chakra-ui/react";
-import { MdEdit } from "react-icons/md";
+import { MdEdit, MdSearch } from "react-icons/md";
 
 export interface ClothingProfile {
   id: string;
@@ -27,6 +30,18 @@ export interface ClothingProfile {
   material: string;
   shirtSize: string;
   pantsSize: string;
+}
+
+export interface SearchResult {
+  id: string;
+  title: string;
+  price: number;
+  currency: string;
+  image: string;
+  condition: string;
+  itemWebUrl: string;
+  seller: string;
+  shippingCost: string | number;
 }
 
 const MATERIAL_OPTIONS = [
@@ -184,21 +199,37 @@ function StyleProfileAccordionItem({
             </Text>
           )}
           {!isEditingTitle && (
-            <IconButton
+            <Box
+              as="span"
+              role="button"
+              tabIndex={0}
               aria-label="Edit profile title"
-              size="xs"
-              variant="ghost"
+              fontSize="xs"
+              p="1"
+              borderRadius="sm"
+              color="fg.muted"
+              bg="transparent"
+              cursor="pointer"
               flexShrink={0}
+              _hover={{ bg: "bg.muted", color: "fg" }}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 setDraftTitle(profile.title);
                 setIsEditingTitle(true);
               }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDraftTitle(profile.title);
+                  setIsEditingTitle(true);
+                }
+              }}
               className="edit-title-btn"
             >
               <MdEdit />
-            </IconButton>
+            </Box>
           )}
         </Box>
         <Accordion.ItemIndicator />
@@ -357,6 +388,10 @@ function StyleProfileAccordionItem({
 export default function App() {
   const [profiles, setProfiles] = useState<ClothingProfile[]>([]);
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string>("");
 
   const handleAddProfile = () => {
     const newProfile = createEmptyProfile();
@@ -370,8 +405,82 @@ export default function App() {
     );
   };
 
+  const buildSearchQuery = (profile: ClothingProfile): string => {
+    const parts: string[] = [];
+    
+    if (profile.description) {
+      parts.push(profile.description);
+    }
+    
+    if (profile.material) {
+      parts.push(profile.material);
+    }
+    
+    if (profile.brandPreference === "high-end") {
+      parts.push("luxury designer brand");
+    } else if (profile.brandPreference === "casual") {
+      parts.push("casual everyday");
+    }
+    
+    return parts.join(" ") || "clothing";
+  };
+
+  const handleSearch = async () => {
+    if (!selectedProfileId) {
+      setSearchError("Please select a profile to search");
+      return;
+    }
+
+    const selectedProfile = profiles.find((p) => p.id === selectedProfileId);
+    if (!selectedProfile) {
+      setSearchError("Selected profile not found");
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchError("");
+    setSearchResults([]);
+
+    try {
+      const searchQuery = buildSearchQuery(selectedProfile);
+      const params = new URLSearchParams({
+        query: searchQuery,
+        limit: "20",
+      });
+
+      // Add optional filters
+      if (selectedProfile.minPrice || selectedProfile.maxPrice) {
+        const minPrice = selectedProfile.minPrice || "0";
+        const maxPrice = selectedProfile.maxPrice || "999999";
+        params.append("filter", `price:[${minPrice}..${maxPrice}]`);
+      }
+
+      const response = await fetch(
+        `http://localhost:3000/recommend?${params.toString()}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setSearchResults(data.products || []);
+      
+      if (data.products.length === 0) {
+        setSearchError("No items found. Try adjusting your profile filters.");
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchError(
+        error instanceof Error ? error.message : "Failed to search products"
+      );
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   return (
-    <Container maxW="container.md" py="8">
+    <Container maxW="container.xl" py="8">
       <VStack gap="8" align="stretch">
         <Heading size="lg">Clothing recommendations</Heading>
         <Text color="fg.muted">
@@ -403,25 +512,184 @@ export default function App() {
             one.
           </Box>
         ) : (
-          <Accordion.Root
-            multiple
-            collapsible
-            value={expandedIds}
-            onValueChange={(e) => setExpandedIds(e.value ?? [])}
-            className="profiles-accordion"
-          >
-            {profiles.map((profile, index) => (
-              <StyleProfileAccordionItem
-                key={profile.id}
-                profile={profile}
-                index={index}
-                onUpdate={handleUpdateProfile}
-                onSaveSuccess={() =>
-                  setExpandedIds((prev) => prev.filter((id) => id !== profile.id))
-                }
-              />
-            ))}
-          </Accordion.Root>
+          <>
+            <Accordion.Root
+              multiple
+              collapsible
+              value={expandedIds}
+              onValueChange={(e) => setExpandedIds(e.value ?? [])}
+              className="profiles-accordion"
+            >
+              {profiles.map((profile, index) => (
+                <StyleProfileAccordionItem
+                  key={profile.id}
+                  profile={profile}
+                  index={index}
+                  onUpdate={handleUpdateProfile}
+                  onSaveSuccess={() =>
+                    setExpandedIds((prev) => prev.filter((id) => id !== profile.id))
+                  }
+                />
+              ))}
+            </Accordion.Root>
+
+            {/* Search Section */}
+            <Box
+              p="6"
+              borderRadius="lg"
+              borderWidth="1px"
+              bg="bg.subtle"
+              className="search-section"
+            >
+              <VStack gap="4" align="stretch">
+                <Heading size="md">Search for Items</Heading>
+                <Text color="fg.muted" fontSize="sm">
+                  Select a profile and search for matching clothing items on eBay
+                </Text>
+
+                <Field.Root>
+                  <Field.Label>Select Profile</Field.Label>
+                  <NativeSelect.Root>
+                    <NativeSelect.Field
+                      value={selectedProfileId}
+                      onChange={(e) => setSelectedProfileId(e.target.value)}
+                    >
+                      <option value="">Choose a profile...</option>
+                      {profiles.map((profile, index) => (
+                        <option key={profile.id} value={profile.id}>
+                          {profile.title.trim() || `Style profile ${index + 1}`}
+                        </option>
+                      ))}
+                    </NativeSelect.Field>
+                    <NativeSelect.Indicator />
+                  </NativeSelect.Root>
+                  <Field.HelperText>
+                    The selected profile's preferences will be used for the search
+                  </Field.HelperText>
+                </Field.Root>
+
+                <Button
+                  onClick={handleSearch}
+                  colorPalette="green"
+                  disabled={!selectedProfileId || isSearching}
+                  loading={isSearching}
+                  className="search-btn"
+                >
+                  <MdSearch />
+                  Search Items
+                </Button>
+
+                {searchError && (
+                  <Box
+                    p="3"
+                    borderRadius="md"
+                    bg="red.50"
+                    color="red.700"
+                    fontSize="sm"
+                  >
+                    {searchError}
+                  </Box>
+                )}
+              </VStack>
+            </Box>
+
+            {/* Search Results */}
+            {isSearching && (
+              <Box textAlign="center" py="8">
+                <Spinner size="lg" colorPalette="blue" />
+                <Text mt="4" color="fg.muted">
+                  Searching for items...
+                </Text>
+              </Box>
+            )}
+
+            {!isSearching && searchResults.length > 0 && (
+              <Box>
+                <Heading size="md" mb="4">
+                  Search Results ({searchResults.length} items)
+                </Heading>
+                <Grid
+                  templateColumns="repeat(auto-fill, minmax(250px, 1fr))"
+                  gap="6"
+                  className="results-grid"
+                >
+                  {searchResults.map((item) => (
+                    <Box
+                      key={item.id}
+                      borderRadius="lg"
+                      borderWidth="1px"
+                      overflow="hidden"
+                      bg="bg.surface"
+                      transition="all 0.2s"
+                      _hover={{
+                        transform: "translateY(-4px)",
+                        shadow: "lg",
+                      }}
+                      className="result-item"
+                    >
+                      {item.image && (
+                        <Image
+                          src={item.image}
+                          alt={item.title}
+                          width="100%"
+                          height="200px"
+                          objectFit="cover"
+                        />
+                      )}
+                      <Box p="4">
+                        <Text
+                          fontWeight="semibold"
+                          fontSize="sm"
+                          lineClamp={2}
+                          mb="2"
+                          minHeight="40px"
+                        >
+                          {item.title}
+                        </Text>
+                        <Text
+                          fontSize="xl"
+                          fontWeight="bold"
+                          color="green.600"
+                          mb="2"
+                        >
+                          ${item.price} {item.currency}
+                        </Text>
+                        <Box display="flex" gap="2" mb="3" flexWrap="wrap">
+                          {item.condition && (
+                            <Badge size="sm" colorPalette="blue">
+                              {item.condition}
+                            </Badge>
+                          )}
+                          {item.shippingCost !== "N/A" && (
+                            <Badge size="sm" colorPalette="gray">
+                              +${item.shippingCost} shipping
+                            </Badge>
+                          )}
+                        </Box>
+                        <Text fontSize="xs" color="fg.muted" mb="3">
+                          Seller: {item.seller}
+                        </Text>
+                        <Button
+                          asChild
+                          size="sm"
+                          width="100%"
+                          colorPalette="blue"
+                        >
+                          <a
+                            href={item.itemWebUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            View on eBay
+                          </a>
+                        </Button>
+                      </Box>
+                    </Box>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+          </>
         )}
       </VStack>
     </Container>

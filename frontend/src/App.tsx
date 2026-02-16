@@ -389,7 +389,7 @@ export default function App() {
   const [profiles, setProfiles] = useState<ClothingProfile[]>([]);
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchResults, setSearchResults] = useState<any>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string>("");
 
@@ -464,9 +464,9 @@ export default function App() {
       }
 
       const data = await response.json();
-      setSearchResults(data.products || []);
-      
-      if (data.products.length === 0) {
+      setSearchResults(data.results || []);
+      console.log(searchResults);
+      if (data.results.length === 0) {
         setSearchError("No items found. Try adjusting your profile filters.");
       }
     } catch (error) {
@@ -614,6 +614,7 @@ export default function App() {
                   className="results-grid"
                 >
                   {searchResults.map((item) => (
+                    console.log(item),
                     <Box
                       key={item.id}
                       borderRadius="lg"
@@ -627,10 +628,10 @@ export default function App() {
                       }}
                       className="result-item"
                     >
-                      {item.image && (
+                      {item.item.image_urls[0] && (
                         <Image
-                          src={item.image}
-                          alt={item.title}
+                          src={item.item.image_urls[0]}
+                          alt={item.item.name}
                           width="100%"
                           height="200px"
                           objectFit="cover"
@@ -644,7 +645,7 @@ export default function App() {
                           mb="2"
                           minHeight="40px"
                         >
-                          {item.title}
+                          {item.item.name}
                         </Text>
                         <Text
                           fontSize="xl"
@@ -652,7 +653,7 @@ export default function App() {
                           color="green.600"
                           mb="2"
                         >
-                          ${item.price} {item.currency}
+                          ${item.item.price} {item.currency}
                         </Text>
                         <Box display="flex" gap="2" mb="3" flexWrap="wrap">
                           {item.condition && (
@@ -660,14 +661,14 @@ export default function App() {
                               {item.condition}
                             </Badge>
                           )}
-                          {item.shippingCost !== "N/A" && (
+                          {/* {item.shippingCost !== "N/A" && (
                             <Badge size="sm" colorPalette="gray">
                               +${item.shippingCost} shipping
                             </Badge>
-                          )}
+                          )} */}
                         </Box>
                         <Text fontSize="xs" color="fg.muted" mb="3">
-                          Seller: {item.seller}
+                          Seller: {item.item.brand_store} via {item.item.data_source}
                         </Text>
                         <Button
                           asChild
@@ -676,11 +677,11 @@ export default function App() {
                           colorPalette="blue"
                         >
                           <a
-                            href={item.itemWebUrl}
+                            href={item.item.itemWebUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            View on eBay
+                            View on {item.item.data_source}
                           </a>
                         </Button>
                       </Box>

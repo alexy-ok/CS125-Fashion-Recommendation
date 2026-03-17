@@ -1,5 +1,7 @@
 const EbayAuthToken = require('ebay-oauth-nodejs-client');
 const axios = require('axios');
+const fs = require('fs').promises;
+const path = require('path');
 require('dotenv').config();
 
 const ebayAuthToken = new EbayAuthToken({
@@ -111,8 +113,68 @@ async function getItemDetails(itemId) {
     }
 }
 
+/**
+ * Fetch recent clothing postings from eBay and store them in a JSON file
+ * @param {object} options - Fetch options
+ * @param {number} options.limit - Number of items to fetch (default: 50)
+ * @param {string} options.outputFile - Output JSON file path (default: data/ebay_clothing.json)
+ * @param {string} options.category - Clothing category to search (default: 'clothing')
+ * @param {string} options.categoryId - Specific eBay category ID (optional, defaults to Women's Clothing)
+ * @returns {Promise<object>} Result with file path and item count
+ */
+async function fetchAndStoreClothing(options = {}) {
+    try {
+        const limit = options.limit || 50;
+        const outputFile = options.outputFile || path.join(__dirname, 'data', 'ebay_clothing.json');
+        const category = options.category || 'clothing';
+        
+        console.log(`Fetching ${limit} recent clothing items from eBay...`);
+        
+        // 15724 = Women's Clothing
+        // 1059 = Men's Clothing
+        const categoryId = options.categoryId || '15724';
+        
+        const items = await searchProducts(category, {
+            limit: limit,
+            categoryId: categoryId,
+            sortOrder: 'newlyListed' // Get recent postings
+        });
+        
+        const dataToStore = {
+            fetchedAt: new Date().toISOString(),
+            totalItems: items.length,
+            category: category,
+            categoryId: categoryId,
+            items: items
+        };
+        
+        const dataDir = path.dirname(outputFile);
+        await fs.mkdir(dataDir, { recursive: true });
+        
+        await fs.writeFile(
+            outputFile,
+            JSON.stringify(dataToStore, null, 2),
+            'utf8'
+        );
+        
+        console.log(`Successfully saved ${items.length} clothing items to ${outputFile}`);
+        
+        return {
+            success: true,
+            filePath: outputFile,
+            itemCount: items.length,
+            fetchedAt: dataToStore.fetchedAt
+        };
+        
+    } catch (error) {
+        console.error('Error fetching and storing clothing:', error.message);
+        throw new Error(`Failed to fetch and store clothing: ${error.message}`);
+    }
+}
+
 module.exports = {
     getAccessToken,
     searchProducts,
-    getItemDetails
+    getItemDetails,
+    fetchAndStoreClothing
 };

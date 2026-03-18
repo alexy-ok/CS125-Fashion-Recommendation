@@ -67,21 +67,25 @@ app.use((req, _res, next) => {
   next();
 });
 
-app.post('/auth/signup', async (req, res) => {
+app.post('/api/auth/signup', async (req, res) => {
   try {
     const { username, password } = req.body || {};
+    console.log("username: ", username);
+    console.log("password: ", password);
     if (!username || !password) {
       return res.status(400).json({ error: 'username and password are required' });
     }
     const created = await signup(String(username).trim(), String(password));
+    console.log("created: ", created);
     createSessionForUser(res, created.id);
     return res.json({ user: created });
   } catch (e) {
+    console.error('Signup error:', e.message);
     return res.status(e.status || 500).json({ error: e.message || 'Signup failed' });
   }
 });
 
-app.post('/auth/login', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (!username || !password) {
@@ -95,17 +99,17 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
-app.post('/auth/logout', (req, res) => {
+app.post('/api/auth/logout', (req, res) => {
   destroySession(req, res);
   res.json({ ok: true });
 });
 
-app.get('/auth/me', (req, res) => {
+app.get('/api/auth/me', (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   return res.json({ user: req.user });
 });
 
-app.post('/ai-score', upload.single('image'), async (req, res) => {
+app.post('/api/ai-score', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Missing image. Send as multipart/form-data with field "image".' });
@@ -141,7 +145,7 @@ Description: ${description}`;
   }
 });
 
-app.get('/search-products', async (req, res) => {
+app.get('/api/search-products', async (req, res) => {
   try {
     const { query, limit, categoryId, condition, sortOrder } = req.query;
     
@@ -168,7 +172,7 @@ app.get('/search-products', async (req, res) => {
   }
 });
 
-app.get('/item/:itemId', async (req, res) => {
+app.get('/api/item/:itemId', async (req, res) => {
   try {
     const { itemId } = req.params;
     const details = await getItemDetails(itemId);
@@ -183,7 +187,7 @@ app.get('/item/:itemId', async (req, res) => {
  * Recommend clothing items from the indexed catalog.
  * Query params: query, minPrice, maxPrice, style, material, shirt_size, pant_size, limit
  */
-app.get('/recommend', (req, res) => {
+app.get('/api/recommend', (req, res) => {
   try {
     if (!recommendationIndex) {
       return res.status(503).json({ error: 'Recommendation index not loaded' });
@@ -227,7 +231,7 @@ app.get('/recommend', (req, res) => {
   }
 });
 
-app.post('/profile-interaction', requireAuth, (req, res) => {
+app.post('/api/profile-interaction', requireAuth, (req, res) => {
   try {
     const { item, eventType } = req.body || {};
     if (!item || typeof item !== 'object') return res.status(400).json({ error: 'item is required' });
@@ -243,7 +247,7 @@ app.post('/profile-interaction', requireAuth, (req, res) => {
   }
 });
 
-app.get('/user-model', requireAuth, (req, res) => {
+app.get('/api/user-model', requireAuth, (req, res) => {
   try {
     const model = getUserModel(req.user.id) || createEmptyProfile();
     return res.json({ userId: req.user.id, model });
@@ -251,6 +255,11 @@ app.get('/user-model', requireAuth, (req, res) => {
     console.error('Profile fetch error:', error);
     return res.status(500).json({ error: error.message || 'Profile fetch failed' });
   }
+});
+
+
+app.get('/test', (req, res) => {
+  return res.json({ message: 'Hello, world!' });
 });
 
 app.listen(PORT, (error) => {

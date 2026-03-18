@@ -20,7 +20,7 @@ import {
 } from "@chakra-ui/react";
 import { MdEdit, MdSearch } from "react-icons/md";
 
-const API_BASE = "/api";
+const API_BASE = "http://localhost:3000/api";
 
 export interface ClothingProfile {
   id: string;
@@ -448,6 +448,7 @@ export default function App() {
     setIsAuthBusy(true);
     try {
       const endpoint = authMode === "signup" ? "/auth/signup" : "/auth/login";
+      console.log("endpoint: ", `${API_BASE}${endpoint}`);
       const res = await fetch(`${API_BASE}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

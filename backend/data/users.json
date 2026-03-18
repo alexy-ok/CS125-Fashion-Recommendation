@@ -62,6 +62,15 @@
         "hash": "26f19cf735d4571e0f086327189549f8f567fdce878f79d73588c8bd6d19a69b5ea492b263bf68a5417618af1de2249dfe745b2e98c7e0d1eb883757d58cca7f"
       },
       "createdAt": 1773803709909
+    },
+    {
+      "id": "f352b2dc-6a11-4dbe-b8d7-51f27991fa79",
+      "username": "shalder",
+      "password": {
+        "salt": "b0c265d3836e7dae6b16ef71fde17c68",
+        "hash": "20246345dc761e261604868f5d8a5be90c6a5becad1b73f5de11015c67593f4a1009079bdb66db773f523863a6d7e0685a8a7c104db7b400fe0ce58868bf492a"
+      },
+      "createdAt": 1773857287538
     }
   ]
 }

@@ -21,6 +21,25 @@ import {
 import { MdEdit, MdSearch } from "react-icons/md";
 
 const API_BASE = "http://localhost:3000/api";
+const CLIENT_UID_KEY = "fashionrec_uid";
+
+const CLIENT_UID = (() => {
+  // Ensure the app uses a single stable id for all requests.
+  // localStorage is best-effort; if it fails, we still keep a stable in-memory uid.
+  const fallback = `anon_${crypto.randomUUID()}`;
+  try {
+    const existing = localStorage.getItem(CLIENT_UID_KEY);
+    if (existing) return existing;
+    localStorage.setItem(CLIENT_UID_KEY, fallback);
+    return fallback;
+  } catch {
+    return fallback;
+  }
+})();
+
+function getClientUid() {
+  return CLIENT_UID;
+}
 
 export interface ClothingProfile {
   id: string;
@@ -425,9 +444,39 @@ export default function App() {
   const [personalModelJson, setPersonalModelJson] = useState<string>("");
   const [isLoadingPersonalModel, setIsLoadingPersonalModel] = useState(false);
 
+  const loadStyleProfiles = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/style-profiles`, {
+        credentials: "include",
+        headers: { "X-User-Id": getClientUid() },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to load style profiles");
+      setProfiles(Array.isArray(data.profiles) ? data.profiles : []);
+    } catch {
+      setProfiles([]);
+    }
+  };
+
+  const saveStyleProfiles = async (nextProfiles: ClothingProfile[]) => {
+    try {
+      await fetch(`${API_BASE}/style-profiles`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "X-User-Id": getClientUid() },
+        credentials: "include",
+        body: JSON.stringify({ profiles: nextProfiles }),
+      });
+    } catch {
+      // ignore save failures (keep UI responsive)
+    }
+  };
+
   const refreshMe = async () => {
     try {
-      const res = await fetch(`${API_BASE}/auth/me`);
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        credentials: "include",
+        headers: { "X-User-Id": getClientUid() },
+      });
       if (!res.ok) {
         setAuthUser(null);
         return;
@@ -451,7 +500,8 @@ export default function App() {
       console.log("endpoint: ", `${API_BASE}${endpoint}`);
       const res = await fetch(`${API_BASE}${endpoint}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-User-Id": getClientUid() },
+        credentials: "include",
         body: JSON.stringify({
           username: authUsername.trim(),
           password: authPassword,
@@ -471,7 +521,11 @@ export default function App() {
 
   const logout = async () => {
     try {
-      await fetch(`${API_BASE}/auth/logout`, { method: "POST" });
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "X-User-Id": getClientUid() },
+      });
     } finally {
       setAuthUser(null);
     }
@@ -488,7 +542,8 @@ export default function App() {
     try {
       await fetch(`${API_BASE}/profile-interaction`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-User-Id": getClientUid() },
+        credentials: "include",
         body: JSON.stringify({
           eventType,
           item,
@@ -503,13 +558,12 @@ export default function App() {
   };
 
   const refreshPersonalModel = async () => {
-    if (!authUser) {
-      setPersonalModelJson("");
-      return;
-    }
     setIsLoadingPersonalModel(true);
     try {
-      const res = await fetch(`${API_BASE}/user-model`);
+      const res = await fetch(`${API_BASE}/user-model`, {
+        credentials: "include",
+        headers: { "X-User-Id": getClientUid() },
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load personal model");
       setPersonalModelJson(JSON.stringify(data.model, null, 2));
@@ -522,35 +576,41 @@ export default function App() {
 
   const handleAddProfile = () => {
     const newProfile = createEmptyProfile();
-    setProfiles((prev) => [...prev, newProfile]);
+    setProfiles((prev) => {
+      const next = [...prev, newProfile];
+      saveStyleProfiles(next);
+      return next;
+    });
     setExpandedIds((prev) => [...prev, newProfile.id]);
   };
 
   const handleUpdateProfile = (id: string, updates: Partial<ClothingProfile>) => {
-    setProfiles((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
-    );
+    setProfiles((prev) => {
+      const next = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
+      saveStyleProfiles(next);
+      return next;
+    });
   };
 
   const handleDeleteProfile = (id: string) => {
-    setProfiles((prev) => prev.filter((p) => p.id !== id));
+    setProfiles((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      saveStyleProfiles(next);
+      return next;
+    });
     setExpandedIds((prev) => prev.filter((pid) => pid !== id));
     if (selectedProfileId === id) {
       setSelectedProfileId("");
       setSearchResults([]);
       setSearchError("");
-      setPersonalModelJson("");
     }
   };
 
   useEffect(() => {
-    if (!authUser) {
-      setPersonalModelJson("");
-      return;
-    }
+    loadStyleProfiles();
     refreshPersonalModel();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUser, selectedProfileId]);
+  }, [authUser]);
 
   const buildSearchQuery = (profile: ClothingProfile): string => {
     const parts: string[] = [];
@@ -624,7 +684,10 @@ export default function App() {
         params.append("pant_size", selectedProfile.pantsSize);
       }
 
-      const response = await fetch(`${API_BASE}/recommend?${params.toString()}`);
+      const response = await fetch(`${API_BASE}/recommend?${params.toString()}`, {
+        credentials: "include",
+        headers: { "X-User-Id": getClientUid() },
+      });
 
       if (!response.ok) {
         throw new Error(`Search failed: ${response.statusText}`);
@@ -772,22 +835,23 @@ export default function App() {
                 <Text fontWeight="medium" mb="2">
                   Personal model stats
                 </Text>
-                {!selectedProfileId ? (
-                  <Text fontSize="sm" color="fg.muted">
-                    Select a profile to start interacting. The model shown is per-user.
-                  </Text>
-                ) : isLoadingPersonalModel ? (
+                {isLoadingPersonalModel ? (
                   <Text fontSize="sm" color="fg.muted">
                     Loading…
                   </Text>
                 ) : (
-                  <Textarea
-                    value={personalModelJson || ""}
-                    readOnly
-                    rows={10}
-                    fontFamily="mono"
-                    fontSize="xs"
-                  />
+                  <>
+                    <Text fontSize="sm" color="fg.muted" mb="2">
+                      This model is per-user (not per-style-profile).
+                    </Text>
+                    <Textarea
+                      value={personalModelJson || ""}
+                      readOnly
+                      rows={10}
+                      fontFamily="mono"
+                      fontSize="xs"
+                    />
+                  </>
                 )}
               </Box>
             </Box>

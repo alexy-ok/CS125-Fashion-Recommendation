@@ -127,23 +127,37 @@ app.get('/item/:itemId', async (req, res) => {
 
 /**
  * Recommend clothing items from the indexed catalog.
- * Query params: q (text), size, category, minPrice, maxPrice, limit
+ * Query params: query, minPrice, maxPrice, style, material, shirt_size, pant_size, limit
  */
 app.get('/recommend', (req, res) => {
   try {
     if (!recommendationIndex) {
       return res.status(503).json({ error: 'Recommendation index not loaded' });
     }
-    const { q, size, category, minPrice, maxPrice, limit } = req.query;
-    const results = recommend(recommendationIndex, q || '', {
-      size: size || undefined,
-      category: category || undefined,
-      minPrice: minPrice || undefined,
-      maxPrice: maxPrice || undefined,
-    }, limit ? parseInt(limit, 10) : 20);
+    console.log("req.query: ", req.query);
+    const { query, minPrice, maxPrice, style, material, shirt_size, pant_size, limit } = req.query;
+    
+    const filters = {};
+    if (minPrice) filters.minPrice = parseFloat(minPrice);
+    if (maxPrice) filters.maxPrice = parseFloat(maxPrice);
+    if (style) filters.style = style;
+    if (material) filters.material = material;
+    if (shirt_size) filters.shirt_size = shirt_size;
+    if (pant_size) filters.pant_size = pant_size;
+    
+    const results = recommend(
+      recommendationIndex, 
+      query || '', 
+      filters,
+      limit ? parseInt(limit, 10) : 20
+    );
+    
+    console.log("query: ", query);
+    console.log("filters: ", filters);
+    
     res.json({
-      query: q || '',
-      filters: { size, category, minPrice, maxPrice },
+      query: query || '',
+      filters,
       count: results.length,
       results: results.map(({ item, score }) => ({ item, score })),
     });

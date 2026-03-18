@@ -464,10 +464,27 @@ export default function App() {
       });
 
       // Add optional filters
-      if (selectedProfile.minPrice || selectedProfile.maxPrice) {
-        const minPrice = selectedProfile.minPrice || "0";
-        const maxPrice = selectedProfile.maxPrice || "999999";
-        params.append("filter", `price:[${minPrice}..${maxPrice}]`);
+      if (selectedProfile.minPrice) {
+        params.append("minPrice", selectedProfile.minPrice);
+      }
+      if (selectedProfile.maxPrice) {
+        params.append("maxPrice", selectedProfile.maxPrice);
+      }
+      
+      if (selectedProfile.brandPreference) {
+        params.append("style", selectedProfile.brandPreference === "high-end" ? "expensive" : "casual");
+      }
+      
+      if (selectedProfile.material) {
+        params.append("material", selectedProfile.material);
+      }
+      
+      if (selectedProfile.shirtSize) {
+        params.append("shirt_size", selectedProfile.shirtSize);
+      }
+      
+      if (selectedProfile.pantsSize) {
+        params.append("pant_size", selectedProfile.pantsSize);
       }
 
       const response = await fetch(

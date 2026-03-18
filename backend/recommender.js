@@ -1,4 +1,5 @@
 const { tokenize } = require('./indexer');
+const { personalScore } = require('./personalModel');
 
 /** BM25 parameters: k1 controls term frequency saturation, b controls length normalization. */
 const BM25_K1 = 1.2;
@@ -19,9 +20,10 @@ function bm25Idf(docCount, docFreq) {
  * @param {string} query - User search text (e.g. "black jacket")
  * @param {object} filters - Optional: size, category, minPrice, maxPrice
  * @param {number} limit - Max number of results (default 20)
- * @returns {Array<{ item: object, score: number }>}
+ * @param {object} options - Optional: { profile, candidateLimit }
+ * @returns {Array<{ item: object, score: number, bm25Score: number, personal: number }>}
  */
-function recommend(ctx, query, filters = {}, limit = 20) {
+function recommend(ctx, query, filters = {}, limit = 20, options = {}) {
   const { items, index, docCount, docLengths = [], avgdl = 0 } = ctx;
   const terms = tokenize(query || '');
 
@@ -66,7 +68,7 @@ function recommend(ctx, query, filters = {}, limit = 20) {
     if (minPrice != null && (price == null || price < minPrice)) continue;
     if (maxPrice != null && (price == null || price > maxPrice)) continue;
 
-    let score = 0;
+    let bm25Score = 0;
     if (terms.length > 0) {
       const docLen = docLengths[docId] ?? 0;
       const norm = avgdl > 0 ? 1 - BM25_B + BM25_B * (docLen / avgdl) : 1;
@@ -76,18 +78,30 @@ function recommend(ctx, query, filters = {}, limit = 20) {
           const tf = postings[docId];
           const df = Object.keys(postings).length;
           const idf = bm25Idf(docCount, df);
-          score += idf * (tf * (BM25_K1 + 1)) / (tf + BM25_K1 * norm);
+          bm25Score += idf * (tf * (BM25_K1 + 1)) / (tf + BM25_K1 * norm);
         }
       }
     } else {
-      score = 1;
+      bm25Score = 1;
     }
 
-    scored.push({ item, score });
+    scored.push({ item, bm25Score });
   }
 
-  scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, limit);
+  scored.sort((a, b) => b.bm25Score - a.bm25Score);
+
+  const candidateLimit = Number(options.candidateLimit || 100);
+  const top = scored.slice(0, Math.max(limit, candidateLimit));
+
+  const profile = options.profile || null;
+  const withPersonal = top.map(({ item, bm25Score }) => {
+    const personal = profile ? personalScore(profile, item) : 0;
+    const score = profile ? 0.75 * bm25Score + 0.25 * personal : bm25Score;
+    return { item, score, bm25Score, personal };
+  });
+
+  withPersonal.sort((a, b) => b.score - a.score);
+  return withPersonal.slice(0, limit);
 }
 
 module.exports = { recommend };

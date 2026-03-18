@@ -6,6 +6,9 @@ const { GoogleGenerativeAI, SchemaType } = require('@google/generative-ai');
 const { searchProducts, getItemDetails } = require('./ebay');
 const { loadAndBuildIndex } = require('./indexer');
 const { recommend } = require('./recommender');
+const { getSessionUser, requireAuth, signup, login, createSessionForUser, destroySession } = require('./auth');
+const { getProfile, upsertProfile } = require('./stores/profilesStore');
+const { createEmptyProfile, applyEvent } = require('./personalModel');
 
 const app = express();
 const PORT = 3000;
@@ -39,9 +42,16 @@ const model = genAI.getGenerativeModel({
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Vary', 'Origin');
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -50,6 +60,50 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use((req, _res, next) => {
+  const user = getSessionUser(req);
+  if (user) req.user = { id: user.id, username: user.username };
+  next();
+});
+
+app.post('/auth/signup', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ error: 'username and password are required' });
+    }
+    const created = await signup(String(username).trim(), String(password));
+    createSessionForUser(res, created.id);
+    return res.json({ user: created });
+  } catch (e) {
+    return res.status(e.status || 500).json({ error: e.message || 'Signup failed' });
+  }
+});
+
+app.post('/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ error: 'username and password are required' });
+    }
+    const user = await login(String(username).trim(), String(password));
+    createSessionForUser(res, user.id);
+    return res.json({ user });
+  } catch (e) {
+    return res.status(e.status || 500).json({ error: e.message || 'Login failed' });
+  }
+});
+
+app.post('/auth/logout', (req, res) => {
+  destroySession(req, res);
+  res.json({ ok: true });
+});
+
+app.get('/auth/me', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  return res.json({ user: req.user });
+});
 
 app.post('/ai-score', upload.single('image'), async (req, res) => {
   try {
@@ -135,7 +189,7 @@ app.get('/recommend', (req, res) => {
       return res.status(503).json({ error: 'Recommendation index not loaded' });
     }
     console.log("req.query: ", req.query);
-    const { query, minPrice, maxPrice, style, material, shirt_size, pant_size, limit } = req.query;
+    const { query, minPrice, maxPrice, style, material, shirt_size, pant_size, limit, profileId } = req.query;
     
     const filters = {};
     if (minPrice) filters.minPrice = parseFloat(minPrice);
@@ -145,11 +199,17 @@ app.get('/recommend', (req, res) => {
     if (shirt_size) filters.shirt_size = shirt_size;
     if (pant_size) filters.pant_size = pant_size;
     
+    let profile = null;
+    if (req.user && profileId) {
+      profile = getProfile(req.user.id, String(profileId)) || null;
+    }
+
     const results = recommend(
       recommendationIndex, 
       query || '', 
       filters,
-      limit ? parseInt(limit, 10) : 20
+      limit ? parseInt(limit, 10) : 20,
+      { profile, candidateLimit: 100 }
     );
     
     console.log("query: ", query);
@@ -159,11 +219,29 @@ app.get('/recommend', (req, res) => {
       query: query || '',
       filters,
       count: results.length,
-      results: results.map(({ item, score }) => ({ item, score })),
+      results: results.map(({ item, score, bm25Score, personal }) => ({ item, score, bm25Score, personal })),
     });
   } catch (error) {
     console.error('Recommend error:', error);
     res.status(500).json({ error: error.message || 'Recommendation failed' });
+  }
+});
+
+app.post('/profile-interaction', requireAuth, (req, res) => {
+  try {
+    const { profileId, item, eventType } = req.body || {};
+    if (!profileId) return res.status(400).json({ error: 'profileId is required' });
+    if (!item || typeof item !== 'object') return res.status(400).json({ error: 'item is required' });
+    if (!eventType) return res.status(400).json({ error: 'eventType is required' });
+
+    const pid = String(profileId);
+    const current = getProfile(req.user.id, pid) || createEmptyProfile();
+    const updated = applyEvent(current, item, String(eventType));
+    upsertProfile(req.user.id, pid, updated);
+    return res.json({ ok: true, profile: updated });
+  } catch (error) {
+    console.error('Profile interaction error:', error);
+    return res.status(500).json({ error: error.message || 'Profile update failed' });
   }
 });
 

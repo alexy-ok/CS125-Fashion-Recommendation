@@ -33,15 +33,30 @@ export interface ClothingProfile {
 }
 
 export interface SearchResult {
-  id: string;
-  title: string;
-  price: number;
-  currency: string;
-  image: string;
-  condition: string;
-  itemWebUrl: string;
-  seller: string;
-  shippingCost: string | number;
+  item: {
+    brand_store: string,
+    category: string,
+    data_source: string,
+    description: string,
+    docId: number,
+    image_urls: string[],
+    material: string,
+    name: string,
+    price: number | null,
+    sizes: string[],
+  }
+  score: number
+  // id: string;
+  // title: string;
+  // price: number;
+  // currency: string;
+  // image: string;
+  // condition: string;
+  // itemWebUrl: string;
+  // seller: string;
+  // shippingCost: string | number;
+
+
 }
 
 const MATERIAL_OPTIONS = [
@@ -464,9 +479,10 @@ export default function App() {
       }
 
       const data = await response.json();
-      setSearchResults(data.products || []);
+      console.log("data: ", data);
+      setSearchResults(data.results || []);
       
-      if (data.products.length === 0) {
+      if (!data.results || data.results.length === 0) {
         setSearchError("No items found. Try adjusting your profile filters.");
       }
     } catch (error) {
@@ -615,7 +631,7 @@ export default function App() {
                 >
                   {searchResults.map((item) => (
                     <Box
-                      key={item.id}
+                      key={item.item.docId}
                       borderRadius="lg"
                       borderWidth="1px"
                       overflow="hidden"
@@ -627,10 +643,10 @@ export default function App() {
                       }}
                       className="result-item"
                     >
-                      {item.image && (
+                      {item.item.image_urls && (
                         <Image
-                          src={item.image}
-                          alt={item.title}
+                          src={item.item.image_urls[0]}
+                          alt={item.item.name}
                           width="100%"
                           height="200px"
                           objectFit="cover"
@@ -644,7 +660,7 @@ export default function App() {
                           mb="2"
                           minHeight="40px"
                         >
-                          {item.title}
+                          {item.item.name}
                         </Text>
                         <Text
                           fontSize="xl"
@@ -652,37 +668,38 @@ export default function App() {
                           color="green.600"
                           mb="2"
                         >
-                          ${item.price} {item.currency}
+                          ${item.item.price} 
+                          {/* {item.item.currency} */}
                         </Text>
                         <Box display="flex" gap="2" mb="3" flexWrap="wrap">
-                          {item.condition && (
+                          {item.item.material && (
                             <Badge size="sm" colorPalette="blue">
-                              {item.condition}
+                              {item.item.material}
                             </Badge>
                           )}
-                          {item.shippingCost !== "N/A" && (
+                          {/* {item.item.price !== null && (
                             <Badge size="sm" colorPalette="gray">
-                              +${item.shippingCost} shipping
+                              +${item.item.price} shipping
                             </Badge>
-                          )}
+                          )} */}
                         </Box>
                         <Text fontSize="xs" color="fg.muted" mb="3">
-                          Seller: {item.seller}
+                          Seller: {item.item.brand_store}
                         </Text>
-                        <Button
+                        {/* <Button
                           asChild
                           size="sm"
                           width="100%"
                           colorPalette="blue"
-                        >
-                          <a
+                        > */}
+                          {/* <a
                             href={item.itemWebUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
                             View on eBay
-                          </a>
-                        </Button>
+                          </a> */}
+                        {/* </Button> */}
                       </Box>
                     </Box>
                   ))}

@@ -5,7 +5,7 @@ const path = require('path');
 const { GoogleGenerativeAI, SchemaType } = require('@google/generative-ai');
 const { searchProducts, getItemDetails } = require('./ebay');
 const { loadAndBuildIndex } = require('./indexer');
-const { recommend } = require('./recommender');
+const { recommend, recommendWithVisualScoring } = require('./recommender');
 
 const app = express();
 const PORT = 3000;
@@ -129,11 +129,13 @@ app.get('/item/:itemId', async (req, res) => {
  * Recommend clothing items from the indexed catalog.
  * Query params: query, minPrice, maxPrice, style, material, shirt_size, pant_size, limit
  */
-app.get('/recommend', (req, res) => {
+app.get('/recommend', async (req, res) => {
   try {
     if (!recommendationIndex) {
       return res.status(503).json({ error: 'Recommendation index not loaded' });
     }
+    
+    const startTime = Date.now();
     console.log("req.query: ", req.query);
     const { query, minPrice, maxPrice, style, material, shirt_size, pant_size, limit } = req.query;
     
@@ -145,21 +147,29 @@ app.get('/recommend', (req, res) => {
     if (shirt_size) filters.shirt_size = shirt_size;
     if (pant_size) filters.pant_size = pant_size;
     
-    const results = recommend(
+    console.log("query: ", query);
+    console.log("filters: ", filters);
+    
+    const results = await recommendWithVisualScoring(
       recommendationIndex, 
       query || '', 
       filters,
       limit ? parseInt(limit, 10) : 20
     );
     
-    console.log("query: ", query);
-    console.log("filters: ", filters);
+    const elapsed = Date.now() - startTime;
+    console.log(`Total recommendation time: ${elapsed}ms`);
     
     res.json({
       query: query || '',
       filters,
       count: results.length,
-      results: results.map(({ item, score }) => ({ item, score })),
+      results: results.map(({ item, score, bm25Score, visualScore }) => ({ 
+        item, 
+        score,
+        bm25Score,
+        visualScore
+      })),
     });
   } catch (error) {
     console.error('Recommend error:', error);

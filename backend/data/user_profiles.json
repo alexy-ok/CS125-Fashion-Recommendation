@@ -1,0 +1,79 @@
+{
+  "users": {
+    "851a0ecd-9b94-4abe-a142-118e32d21118": {
+      "demoProfile": {
+        "likedBrands": {
+          "Nike": 3
+        },
+        "likedCategories": {
+          "jacket": 3
+        },
+        "likedColors": {},
+        "likedTerms": {
+          "nike": 6,
+          "tech": 6,
+          "men": 6,
+          "woven": 6,
+          "jacket": 6,
+          "color": 3,
+          "black": 9
+        },
+        "dislikedBrands": {},
+        "dislikedCategories": {},
+        "dislikedTerms": {},
+        "priceRange": {
+          "min": 81.97,
+          "max": 81.97
+        },
+        "updatedAt": 1773802606154
+      }
+    },
+    "fc3c4846-a343-485f-a252-89faaafad3f5": {
+      "likedBrands": {
+        "Nike": 7.851749999999998,
+        "COS": 7.994249999999999
+      },
+      "likedCategories": {
+        "hoodie": 7.851749999999998,
+        "blazer": 7.994249999999999
+      },
+      "likedColors": {},
+      "likedTerms": {
+        "nike": 7.851749999999998,
+        "black": 15.703499999999996,
+        "tech": 15.703499999999996,
+        "fleece": 15.703499999999996,
+        "hoodie": 15.703499999999996,
+        "streetwear": 7.851749999999998,
+        "athleisure": 7.851749999999998,
+        "cos": 7.994249999999999,
+        "wool": 15.988499999999998,
+        "blazer": 15.988499999999998,
+        "in": 7.994249999999999,
+        "charcoal": 15.988499999999998,
+        "minimal": 7.994249999999999,
+        "tailored": 7.994249999999999,
+        "officewear": 7.994249999999999
+      },
+      "dislikedBrands": {
+        "Zara": 3
+      },
+      "dislikedCategories": {
+        "other": 3
+      },
+      "dislikedTerms": {
+        "tailored": 6,
+        "blazer": 6,
+        "with": 6,
+        "wool": 6,
+        "zw": 6,
+        "collection": 6
+      },
+      "priceRange": {
+        "min": 95,
+        "max": 180
+      },
+      "updatedAt": 1773803733916
+    }
+  }
+}

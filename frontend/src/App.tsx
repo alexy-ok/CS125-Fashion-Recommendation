@@ -153,18 +153,6 @@ function StyleProfileAccordionItem({
   }));
 
   useEffect(() => {
-    setDraft({
-      description: profile.description,
-      minPrice: profile.minPrice,
-      maxPrice: profile.maxPrice,
-      brandPreference: profile.brandPreference,
-      material: profile.material,
-      shirtSize: profile.shirtSize,
-      pantsSize: profile.pantsSize,
-    });
-  }, [profile.id, profile.description, profile.minPrice, profile.maxPrice, profile.brandPreference, profile.material, profile.shirtSize, profile.pantsSize]);
-
-  useEffect(() => {
     if (isEditingTitle) titleInputRef.current?.focus();
   }, [isEditingTitle]);
 
@@ -434,6 +422,8 @@ export default function App() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string>("");
+  const [personalModelJson, setPersonalModelJson] = useState<string>("");
+  const [isLoadingPersonalModel, setIsLoadingPersonalModel] = useState(false);
 
   const refreshMe = async () => {
     try {
@@ -488,21 +478,44 @@ export default function App() {
 
   const trackInteraction = async (
     eventType: "click" | "save" | "notMyStyle" | "skipQuick" | "purchase",
-    item: SearchResult["item"]
+    item: SearchResult["item"],
+    profileIdOverride?: string
   ) => {
-    if (!authUser || !selectedProfileId) return;
+    if (!authUser) return;
+    const pid = profileIdOverride ?? selectedProfileId;
+    if (!pid) return;
     try {
       await fetch(`${API_BASE}/profile-interaction`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          profileId: selectedProfileId,
           eventType,
           item,
         }),
       });
+
+      // Refresh the debug model after updates
+      await refreshPersonalModel();
     } catch {
       // ignore interaction failures (shouldn't block browsing)
+    }
+  };
+
+  const refreshPersonalModel = async () => {
+    if (!authUser) {
+      setPersonalModelJson("");
+      return;
+    }
+    setIsLoadingPersonalModel(true);
+    try {
+      const res = await fetch(`${API_BASE}/user-model`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to load personal model");
+      setPersonalModelJson(JSON.stringify(data.model, null, 2));
+    } catch {
+      setPersonalModelJson("");
+    } finally {
+      setIsLoadingPersonalModel(false);
     }
   };
 
@@ -525,8 +538,18 @@ export default function App() {
       setSelectedProfileId("");
       setSearchResults([]);
       setSearchError("");
+      setPersonalModelJson("");
     }
   };
+
+  useEffect(() => {
+    if (!authUser) {
+      setPersonalModelJson("");
+      return;
+    }
+    refreshPersonalModel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser, selectedProfileId]);
 
   const buildSearchQuery = (profile: ClothingProfile): string => {
     const parts: string[] = [];
@@ -700,9 +723,11 @@ export default function App() {
                 </Grid>
               </Box>
 
-              <Button onClick={handleAddProfile} colorPalette="blue" width="100%">
-                Add Style Profile
-              </Button>
+              <Grid templateColumns="1fr" gap="2">
+                <Button onClick={handleAddProfile} colorPalette="blue" width="100%">
+                  Add Style Profile
+                </Button>
+              </Grid>
 
               <Box mt="4">
                 {profiles.length === 0 ? (
@@ -739,6 +764,29 @@ export default function App() {
                       />
                     ))}
                   </Accordion.Root>
+                )}
+              </Box>
+
+              <Box mt="4" borderWidth="1px" borderRadius="lg" p="4">
+                <Text fontWeight="medium" mb="2">
+                  Personal model stats
+                </Text>
+                {!selectedProfileId ? (
+                  <Text fontSize="sm" color="fg.muted">
+                    Select a profile to start interacting. The model shown is per-user.
+                  </Text>
+                ) : isLoadingPersonalModel ? (
+                  <Text fontSize="sm" color="fg.muted">
+                    Loading…
+                  </Text>
+                ) : (
+                  <Textarea
+                    value={personalModelJson || ""}
+                    readOnly
+                    rows={10}
+                    fontFamily="mono"
+                    fontSize="xs"
+                  />
                 )}
               </Box>
             </Box>

@@ -7,11 +7,11 @@ const { searchProducts, getItemDetails } = require('./ebay');
 const { loadAndBuildIndex } = require('./indexer');
 const { recommend } = require('./recommender');
 const { getSessionUser, requireAuth, signup, login, createSessionForUser, destroySession } = require('./auth');
-const { getProfile, upsertProfile } = require('./stores/profilesStore');
+const { getUserModel, upsertUserModel } = require('./stores/profilesStore');
 const { createEmptyProfile, applyEvent } = require('./personalModel');
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
 
 let recommendationIndex = null;
 try {
@@ -200,8 +200,8 @@ app.get('/recommend', (req, res) => {
     if (pant_size) filters.pant_size = pant_size;
     
     let profile = null;
-    if (req.user && profileId) {
-      profile = getProfile(req.user.id, String(profileId)) || null;
+    if (req.user) {
+      profile = getUserModel(req.user.id) || null;
     }
 
     const results = recommend(
@@ -229,19 +229,27 @@ app.get('/recommend', (req, res) => {
 
 app.post('/profile-interaction', requireAuth, (req, res) => {
   try {
-    const { profileId, item, eventType } = req.body || {};
-    if (!profileId) return res.status(400).json({ error: 'profileId is required' });
+    const { item, eventType } = req.body || {};
     if (!item || typeof item !== 'object') return res.status(400).json({ error: 'item is required' });
     if (!eventType) return res.status(400).json({ error: 'eventType is required' });
 
-    const pid = String(profileId);
-    const current = getProfile(req.user.id, pid) || createEmptyProfile();
+    const current = getUserModel(req.user.id) || createEmptyProfile();
     const updated = applyEvent(current, item, String(eventType));
-    upsertProfile(req.user.id, pid, updated);
-    return res.json({ ok: true, profile: updated });
+    upsertUserModel(req.user.id, updated);
+    return res.json({ ok: true, model: updated });
   } catch (error) {
     console.error('Profile interaction error:', error);
     return res.status(500).json({ error: error.message || 'Profile update failed' });
+  }
+});
+
+app.get('/user-model', requireAuth, (req, res) => {
+  try {
+    const model = getUserModel(req.user.id) || createEmptyProfile();
+    return res.json({ userId: req.user.id, model });
+  } catch (error) {
+    console.error('Profile fetch error:', error);
+    return res.status(500).json({ error: error.message || 'Profile fetch failed' });
   }
 });
 

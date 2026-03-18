@@ -6,9 +6,10 @@ const { GoogleGenerativeAI, SchemaType } = require('@google/generative-ai');
 const { searchProducts, getItemDetails } = require('./ebay');
 const { loadAndBuildIndex } = require('./indexer');
 const { recommend } = require('./recommender');
-const { getSessionUser, requireAuth, signup, login, createSessionForUser, destroySession } = require('./auth');
+const { getSessionUser, signup, login, createSessionForUser, destroySession } = require('./auth');
 const { getUserModel, upsertUserModel } = require('./stores/profilesStore');
 const { createEmptyProfile, applyEvent } = require('./personalModel');
+const { getStyleProfiles, setStyleProfiles } = require('./stores/styleProfilesStore');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -107,6 +108,32 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/auth/me', (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   return res.json({ user: req.user });
+});
+
+app.get('/api/style-profiles', (req, res) => {
+  try {
+    const userId = req.user?.id || 'anon';
+    const profiles = getStyleProfiles(userId);
+    return res.json({ userId, profiles });
+  } catch (error) {
+    console.error('Style profiles fetch error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to load style profiles' });
+  }
+});
+
+app.put('/api/style-profiles', (req, res) => {
+  try {
+    const userId = req.user?.id || 'anon';
+    const { profiles } = req.body || {};
+    if (!Array.isArray(profiles)) {
+      return res.status(400).json({ error: 'profiles must be an array' });
+    }
+    const saved = setStyleProfiles(userId, profiles);
+    return res.json({ userId, profiles: saved });
+  } catch (error) {
+    console.error('Style profiles save error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to save style profiles' });
+  }
 });
 
 app.post('/api/ai-score', upload.single('image'), async (req, res) => {
@@ -231,15 +258,16 @@ app.get('/api/recommend', (req, res) => {
   }
 });
 
-app.post('/api/profile-interaction', requireAuth, (req, res) => {
+app.post('/api/profile-interaction', (req, res) => {
   try {
     const { item, eventType } = req.body || {};
     if (!item || typeof item !== 'object') return res.status(400).json({ error: 'item is required' });
     if (!eventType) return res.status(400).json({ error: 'eventType is required' });
 
-    const current = getUserModel(req.user.id) || createEmptyProfile();
+    const userId = req.user?.id || 'anon';
+    const current = getUserModel(userId) || createEmptyProfile();
     const updated = applyEvent(current, item, String(eventType));
-    upsertUserModel(req.user.id, updated);
+    upsertUserModel(userId, updated);
     return res.json({ ok: true, model: updated });
   } catch (error) {
     console.error('Profile interaction error:', error);
@@ -247,10 +275,11 @@ app.post('/api/profile-interaction', requireAuth, (req, res) => {
   }
 });
 
-app.get('/api/user-model', requireAuth, (req, res) => {
+app.get('/api/user-model', (req, res) => {
   try {
-    const model = getUserModel(req.user.id) || createEmptyProfile();
-    return res.json({ userId: req.user.id, model });
+    const userId = req.user?.id || 'anon';
+    const model = getUserModel(userId) || createEmptyProfile();
+    return res.json({ userId, model });
   } catch (error) {
     console.error('Profile fetch error:', error);
     return res.status(500).json({ error: error.message || 'Profile fetch failed' });

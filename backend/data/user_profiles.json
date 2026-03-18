@@ -31,17 +31,20 @@
     "fc3c4846-a343-485f-a252-89faaafad3f5": {
       "likedBrands": {
         "Nike": 17.524924448437496,
-        "COS": 6.511366589062498
+        "COS": 6.511366589062498,
+        "nike": 4
       },
       "likedCategories": {
         "hoodie": 6.395299448437497,
         "blazer": 6.511366589062498,
-        "pants": 11.129624999999999
+        "pants": 11.129624999999999,
+        "jacket": 2,
+        "t-shirt": 2
       },
       "likedColors": {},
       "likedTerms": {
-        "nike": 28.654549448437493,
-        "black": 23.920223896874997,
+        "nike": 32.65454944843749,
+        "black": 26.920223896874997,
         "tech": 35.04984889687499,
         "fleece": 12.790598896874995,
         "hoodie": 12.790598896874995,
@@ -58,13 +61,19 @@
         "men": 22.259249999999998,
         "woven": 22.259249999999998,
         "pants": 22.259249999999998,
-        "color": 11.129624999999999,
+        "color": 13.129624999999999,
         "anthracite": 2.5721249999999993,
         "cannon": 2.7074999999999996,
         "mosswood": 2.8499999999999996,
         "brown": 2.8499999999999996,
         "silver": 3,
-        "sage": 3
+        "sage": 3,
+        "sb": 2,
+        "skate": 2,
+        "jacket": 2,
+        "white": 1,
+        "sportswear": 2,
+        "shirt": 2
       },
       "dislikedBrands": {
         "Zara": 2.443518749999999
@@ -81,10 +90,31 @@
         "collection": 4.887037499999998
       },
       "priceRange": {
-        "min": 95,
-        "max": 180
+        "min": 28.97,
+        "max": 172.229648
       },
-      "updatedAt": 1773804277681
+      "updatedAt": 1773862647592
+    },
+    "anon": {
+      "likedBrands": {},
+      "likedCategories": {},
+      "likedColors": {},
+      "likedTerms": {},
+      "dislikedBrands": {
+        "nike": 1.5
+      },
+      "dislikedCategories": {
+        "t-shirt": 1.0499999999999998
+      },
+      "dislikedTerms": {
+        "nike": 1.0499999999999998,
+        "sportswear": 1.0499999999999998,
+        "shirt": 1.0499999999999998,
+        "color": 0.5249999999999999,
+        "black": 0.5249999999999999
+      },
+      "priceRange": null,
+      "updatedAt": 1773862651984
     }
   }
 }

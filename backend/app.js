@@ -6,9 +6,12 @@ const { GoogleGenerativeAI, SchemaType } = require('@google/generative-ai');
 const { searchProducts, getItemDetails } = require('./ebay');
 const { loadAndBuildIndex } = require('./indexer');
 const { recommend, recommendWithVisualScoring } = require('./recommender');
+const { getSessionUser, requireAuth, signup, login, createSessionForUser, destroySession } = require('./auth');
+const { getUserModel, upsertUserModel } = require('./stores/profilesStore');
+const { createEmptyProfile, applyEvent } = require('./personalModel');
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
 
 let recommendationIndex = null;
 try {
@@ -39,9 +42,16 @@ const model = genAI.getGenerativeModel({
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Vary', 'Origin');
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -51,7 +61,55 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.post('/ai-score', upload.single('image'), async (req, res) => {
+app.use((req, _res, next) => {
+  const user = getSessionUser(req);
+  if (user) req.user = { id: user.id, username: user.username };
+  next();
+});
+
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    console.log("username: ", username);
+    console.log("password: ", password);
+    if (!username || !password) {
+      return res.status(400).json({ error: 'username and password are required' });
+    }
+    const created = await signup(String(username).trim(), String(password));
+    console.log("created: ", created);
+    createSessionForUser(res, created.id);
+    return res.json({ user: created });
+  } catch (e) {
+    console.error('Signup error:', e.message);
+    return res.status(e.status || 500).json({ error: e.message || 'Signup failed' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+      return res.status(400).json({ error: 'username and password are required' });
+    }
+    const user = await login(String(username).trim(), String(password));
+    createSessionForUser(res, user.id);
+    return res.json({ user });
+  } catch (e) {
+    return res.status(e.status || 500).json({ error: e.message || 'Login failed' });
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  destroySession(req, res);
+  res.json({ ok: true });
+});
+
+app.get('/api/auth/me', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  return res.json({ user: req.user });
+});
+
+app.post('/api/ai-score', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Missing image. Send as multipart/form-data with field "image".' });
@@ -87,7 +145,7 @@ Description: ${description}`;
   }
 });
 
-app.get('/search-products', async (req, res) => {
+app.get('/api/search-products', async (req, res) => {
   try {
     const { query, limit, categoryId, condition, sortOrder } = req.query;
     
@@ -114,7 +172,7 @@ app.get('/search-products', async (req, res) => {
   }
 });
 
-app.get('/item/:itemId', async (req, res) => {
+app.get('/api/item/:itemId', async (req, res) => {
   try {
     const { itemId } = req.params;
     const details = await getItemDetails(itemId);
@@ -129,7 +187,7 @@ app.get('/item/:itemId', async (req, res) => {
  * Recommend clothing items from the indexed catalog.
  * Query params: query, minPrice, maxPrice, style, material, shirt_size, pant_size, limit
  */
-app.get('/recommend', async (req, res) => {
+app.get('/api/recommend', (req, res) => {
   try {
     if (!recommendationIndex) {
       return res.status(503).json({ error: 'Recommendation index not loaded' });
@@ -137,7 +195,7 @@ app.get('/recommend', async (req, res) => {
     
     const startTime = Date.now();
     console.log("req.query: ", req.query);
-    const { query, minPrice, maxPrice, style, material, shirt_size, pant_size, limit } = req.query;
+    const { query, minPrice, maxPrice, style, material, shirt_size, pant_size, limit, profileId } = req.query;
     
     const filters = {};
     if (minPrice) filters.minPrice = parseFloat(minPrice);
@@ -147,14 +205,17 @@ app.get('/recommend', async (req, res) => {
     if (shirt_size) filters.shirt_size = shirt_size;
     if (pant_size) filters.pant_size = pant_size;
     
-    console.log("query: ", query);
-    console.log("filters: ", filters);
-    
-    const results = await recommendWithVisualScoring(
+    let profile = null;
+    if (req.user) {
+      profile = getUserModel(req.user.id) || null;
+    }
+
+    const results = recommend(
       recommendationIndex, 
       query || '', 
       filters,
-      limit ? parseInt(limit, 10) : 20
+      limit ? parseInt(limit, 10) : 20,
+      { profile, candidateLimit: 100 }
     );
     
     const elapsed = Date.now() - startTime;
@@ -164,17 +225,43 @@ app.get('/recommend', async (req, res) => {
       query: query || '',
       filters,
       count: results.length,
-      results: results.map(({ item, score, bm25Score, visualScore }) => ({ 
-        item, 
-        score,
-        bm25Score,
-        visualScore
-      })),
+      results: results.map(({ item, score, bm25Score, personal }) => ({ item, score, bm25Score, personal })),
     });
   } catch (error) {
     console.error('Recommend error:', error);
     res.status(500).json({ error: error.message || 'Recommendation failed' });
   }
+});
+
+app.post('/api/profile-interaction', requireAuth, (req, res) => {
+  try {
+    const { item, eventType } = req.body || {};
+    if (!item || typeof item !== 'object') return res.status(400).json({ error: 'item is required' });
+    if (!eventType) return res.status(400).json({ error: 'eventType is required' });
+
+    const current = getUserModel(req.user.id) || createEmptyProfile();
+    const updated = applyEvent(current, item, String(eventType));
+    upsertUserModel(req.user.id, updated);
+    return res.json({ ok: true, model: updated });
+  } catch (error) {
+    console.error('Profile interaction error:', error);
+    return res.status(500).json({ error: error.message || 'Profile update failed' });
+  }
+});
+
+app.get('/api/user-model', requireAuth, (req, res) => {
+  try {
+    const model = getUserModel(req.user.id) || createEmptyProfile();
+    return res.json({ userId: req.user.id, model });
+  } catch (error) {
+    console.error('Profile fetch error:', error);
+    return res.status(500).json({ error: error.message || 'Profile fetch failed' });
+  }
+});
+
+
+app.get('/test', (req, res) => {
+  return res.json({ message: 'Hello, world!' });
 });
 
 app.listen(PORT, (error) => {

@@ -1,0 +1,76 @@
+{
+  "users": [
+    {
+      "id": "851a0ecd-9b94-4abe-a142-118e32d21118",
+      "username": "testuser",
+      "password": {
+        "salt": "e4b70d559aa969a9941635489030c7d8",
+        "hash": "24882ffb813f6014e84da234b721c7e045ffe233d98ceae9be29cd3b64122d1128b68674b2ccf58aa8f3b27ea9a3bfcd76d5bfa7638a851547a8dd1e38e783f5"
+      },
+      "createdAt": 1773802599343
+    },
+    {
+      "id": "fc3c4846-a343-485f-a252-89faaafad3f5",
+      "username": "test",
+      "password": {
+        "salt": "3cda9197eae4f8346688a8edaba4071c",
+        "hash": "50fb19304c0e88986f8daf4f743e894f37a46ce4495cb4f13c95501eb3d01d5dbcb0f66a248447bc2004fd4b7735d049c38fc36098ddf82521fde0f7d5c0c7f8"
+      },
+      "createdAt": 1773802691164
+    },
+    {
+      "id": "c776be8a-fb80-446b-8941-e461cc202576",
+      "username": "u2",
+      "password": {
+        "salt": "2e6cb290e11cde39c163203c9c0627be",
+        "hash": "621d530e67480183c32ca7fe096d44994bc2b8126242f59c463f18613786117d1b0cec3cfa8c82489074a2c6b019ea4e4ac47993b016695eb0866ad8c30502bf"
+      },
+      "createdAt": 1773803055884
+    },
+    {
+      "id": "4d2dcd9d-eec7-4863-b6a3-a3d607307073",
+      "username": "paneluser",
+      "password": {
+        "salt": "a1416b0fb2a5a6b23a968acd9f7154d8",
+        "hash": "a25cad1e2a3ba9b4590e68f0c7cacdfa0f19e6ec3ed79e5466fb0f0a05af3d1c8d45483167273d02ca82b51880f0ec6bd042937624aee07d32d676464b865a7d"
+      },
+      "createdAt": 1773803537934
+    },
+    {
+      "id": "e714a003-1cef-46b5-9252-1fb594af0f0c",
+      "username": "um",
+      "password": {
+        "salt": "5611ebfad2ab3544f6c1503621b4523e",
+        "hash": "ec14799df85343f0b99967f40f249f95a1eb584850a1a6039850627590e500d85c337e9056888041a4ec2bc6846690b1d198241b9aaf1da534ed357fe5986d81"
+      },
+      "createdAt": 1773803632812
+    },
+    {
+      "id": "9d362de7-5c10-4345-8d60-a27dcd3c383e",
+      "username": "um2",
+      "password": {
+        "salt": "d32f854fe0d7297cb0a3912894e47cfe",
+        "hash": "b5293b2003dce0f0d9d84e18b5c93bb79287dbb1b23adf3e10980dc692aeb7de8a8db883ce6c509bad796fc71b64fb48162f739f02ce011d8d011c75c0f05957"
+      },
+      "createdAt": 1773803652021
+    },
+    {
+      "id": "888fb7e8-769c-49df-b3dd-e9c5397acd7d",
+      "username": "u3",
+      "password": {
+        "salt": "db6cb1037bc6d3adca053c6ef4d73cc2",
+        "hash": "26f19cf735d4571e0f086327189549f8f567fdce878f79d73588c8bd6d19a69b5ea492b263bf68a5417618af1de2249dfe745b2e98c7e0d1eb883757d58cca7f"
+      },
+      "createdAt": 1773803709909
+    },
+    {
+      "id": "f352b2dc-6a11-4dbe-b8d7-51f27991fa79",
+      "username": "shalder",
+      "password": {
+        "salt": "b0c265d3836e7dae6b16ef71fde17c68",
+        "hash": "20246345dc761e261604868f5d8a5be90c6a5becad1b73f5de11015c67593f4a1009079bdb66db773f523863a6d7e0685a8a7c104db7b400fe0ce58868bf492a"
+      },
+      "createdAt": 1773857287538
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "users": {
+    "851a0ecd-9b94-4abe-a142-118e32d21118": {
+      "demoProfile": {
+        "likedBrands": {
+          "Nike": 3
+        },
+        "likedCategories": {
+          "jacket": 3
+        },
+        "likedColors": {},
+        "likedTerms": {
+          "nike": 6,
+          "tech": 6,
+          "men": 6,
+          "woven": 6,
+          "jacket": 6,
+          "color": 3,
+          "black": 9
+        },
+        "dislikedBrands": {},
+        "dislikedCategories": {},
+        "dislikedTerms": {},
+        "priceRange": {
+          "min": 81.97,
+          "max": 81.97
+        },
+        "updatedAt": 1773802606154
+      }
+    },
+    "fc3c4846-a343-485f-a252-89faaafad3f5": {
+      "likedBrands": {
+        "Nike": 17.524924448437496,
+        "COS": 6.511366589062498
+      },
+      "likedCategories": {
+        "hoodie": 6.395299448437497,
+        "blazer": 6.511366589062498,
+        "pants": 11.129624999999999
+      },
+      "likedColors": {},
+      "likedTerms": {
+        "nike": 28.654549448437493,
+        "black": 23.920223896874997,
+        "tech": 35.04984889687499,
+        "fleece": 12.790598896874995,
+        "hoodie": 12.790598896874995,
+        "streetwear": 6.395299448437497,
+        "athleisure": 6.395299448437497,
+        "cos": 6.511366589062498,
+        "wool": 13.022733178124996,
+        "blazer": 13.022733178124996,
+        "in": 6.511366589062498,
+        "charcoal": 13.022733178124996,
+        "minimal": 6.511366589062498,
+        "tailored": 6.511366589062498,
+        "officewear": 6.511366589062498,
+        "men": 22.259249999999998,
+        "woven": 22.259249999999998,
+        "pants": 22.259249999999998,
+        "color": 11.129624999999999,
+        "anthracite": 2.5721249999999993,
+        "cannon": 2.7074999999999996,
+        "mosswood": 2.8499999999999996,
+        "brown": 2.8499999999999996,
+        "silver": 3,
+        "sage": 3
+      },
+      "dislikedBrands": {
+        "Zara": 2.443518749999999
+      },
+      "dislikedCategories": {
+        "other": 2.443518749999999
+      },
+      "dislikedTerms": {
+        "tailored": 4.887037499999998,
+        "blazer": 4.887037499999998,
+        "with": 4.887037499999998,
+        "wool": 4.887037499999998,
+        "zw": 4.887037499999998,
+        "collection": 4.887037499999998
+      },
+      "priceRange": {
+        "min": 95,
+        "max": 180
+      },
+      "updatedAt": 1773804277681
+    }
+  }
+}

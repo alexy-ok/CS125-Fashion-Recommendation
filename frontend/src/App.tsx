@@ -20,6 +20,8 @@ import {
 } from "@chakra-ui/react";
 import { MdEdit, MdSearch } from "react-icons/md";
 
+const API_BASE = "http://localhost:3000/api";
+
 export interface ClothingProfile {
   id: string;
   title: string;
@@ -58,6 +60,8 @@ export interface SearchResult {
 
 
 }
+
+type AuthUser = { id: string; username: string };
 
 const MATERIAL_OPTIONS = [
   { value: "", label: "No preference" },
@@ -125,11 +129,13 @@ function StyleProfileAccordionItem({
   profile,
   index,
   onUpdate,
+  onDelete,
   onSaveSuccess,
 }: {
   profile: ClothingProfile;
   index: number;
   onUpdate: (id: string, updates: Partial<ClothingProfile>) => void;
+  onDelete: (id: string) => void;
   onSaveSuccess?: () => void;
 }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -145,18 +151,6 @@ function StyleProfileAccordionItem({
     shirtSize: profile.shirtSize,
     pantsSize: profile.pantsSize,
   }));
-
-  useEffect(() => {
-    setDraft({
-      description: profile.description,
-      minPrice: profile.minPrice,
-      maxPrice: profile.maxPrice,
-      brandPreference: profile.brandPreference,
-      material: profile.material,
-      shirtSize: profile.shirtSize,
-      pantsSize: profile.pantsSize,
-    });
-  }, [profile.id, profile.description, profile.minPrice, profile.maxPrice, profile.brandPreference, profile.material, profile.shirtSize, profile.pantsSize]);
 
   useEffect(() => {
     if (isEditingTitle) titleInputRef.current?.focus();
@@ -247,6 +241,20 @@ function StyleProfileAccordionItem({
             </Box>
           )}
         </Box>
+        <Button
+          size="xs"
+          variant="outline"
+          colorPalette="red"
+          flexShrink={0}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const ok = window.confirm(`Delete "${displayTitle}"? This cannot be undone.`);
+            if (ok) onDelete(profile.id);
+          }}
+        >
+          Delete
+        </Button>
         <Accordion.ItemIndicator />
       </Accordion.ItemTrigger>
       <Accordion.ItemContent>
@@ -401,12 +409,116 @@ function StyleProfileAccordionItem({
 }
 
 export default function App() {
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authUsername, setAuthUsername] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isAuthBusy, setIsAuthBusy] = useState(false);
+
   const [profiles, setProfiles] = useState<ClothingProfile[]>([]);
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string>("");
+  const [personalModelJson, setPersonalModelJson] = useState<string>("");
+  const [isLoadingPersonalModel, setIsLoadingPersonalModel] = useState(false);
+
+  const refreshMe = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`);
+      if (!res.ok) {
+        setAuthUser(null);
+        return;
+      }
+      const data = await res.json();
+      setAuthUser(data.user ?? null);
+    } catch {
+      setAuthUser(null);
+    }
+  };
+
+  useEffect(() => {
+    refreshMe();
+  }, []);
+
+  const submitAuth = async () => {
+    setAuthError("");
+    setIsAuthBusy(true);
+    try {
+      const endpoint = authMode === "signup" ? "/auth/signup" : "/auth/login";
+      console.log("endpoint: ", `${API_BASE}${endpoint}`);
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: authUsername.trim(),
+          password: authPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Auth failed");
+      setAuthUser(data.user);
+      setAuthPassword("");
+    } catch (e) {
+      setAuthError(e instanceof Error ? e.message : "Auth failed");
+      setAuthUser(null);
+    } finally {
+      setIsAuthBusy(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await fetch(`${API_BASE}/auth/logout`, { method: "POST" });
+    } finally {
+      setAuthUser(null);
+    }
+  };
+
+  const trackInteraction = async (
+    eventType: "click" | "save" | "notMyStyle" | "skipQuick" | "purchase",
+    item: SearchResult["item"],
+    profileIdOverride?: string
+  ) => {
+    if (!authUser) return;
+    const pid = profileIdOverride ?? selectedProfileId;
+    if (!pid) return;
+    try {
+      await fetch(`${API_BASE}/profile-interaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventType,
+          item,
+        }),
+      });
+
+      // Refresh the debug model after updates
+      await refreshPersonalModel();
+    } catch {
+      // ignore interaction failures (shouldn't block browsing)
+    }
+  };
+
+  const refreshPersonalModel = async () => {
+    if (!authUser) {
+      setPersonalModelJson("");
+      return;
+    }
+    setIsLoadingPersonalModel(true);
+    try {
+      const res = await fetch(`${API_BASE}/user-model`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to load personal model");
+      setPersonalModelJson(JSON.stringify(data.model, null, 2));
+    } catch {
+      setPersonalModelJson("");
+    } finally {
+      setIsLoadingPersonalModel(false);
+    }
+  };
 
   const handleAddProfile = () => {
     const newProfile = createEmptyProfile();
@@ -419,6 +531,26 @@ export default function App() {
       prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
     );
   };
+
+  const handleDeleteProfile = (id: string) => {
+    setProfiles((prev) => prev.filter((p) => p.id !== id));
+    setExpandedIds((prev) => prev.filter((pid) => pid !== id));
+    if (selectedProfileId === id) {
+      setSelectedProfileId("");
+      setSearchResults([]);
+      setSearchError("");
+      setPersonalModelJson("");
+    }
+  };
+
+  useEffect(() => {
+    if (!authUser) {
+      setPersonalModelJson("");
+      return;
+    }
+    refreshPersonalModel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser, selectedProfileId]);
 
   const buildSearchQuery = (profile: ClothingProfile): string => {
     const parts: string[] = [];
@@ -441,6 +573,10 @@ export default function App() {
   };
 
   const handleSearch = async () => {
+    if (!authUser) {
+      setSearchError("Please log in first");
+      return;
+    }
     if (!selectedProfileId) {
       setSearchError("Please select a profile to search");
       return;
@@ -461,6 +597,7 @@ export default function App() {
       const params = new URLSearchParams({
         query: searchQuery,
         limit: "20",
+        profileId: selectedProfileId,
       });
 
       // Add optional filters
@@ -487,9 +624,7 @@ export default function App() {
         params.append("pant_size", selectedProfile.pantsSize);
       }
 
-      const response = await fetch(
-        `http://localhost:3000/recommend?${params.toString()}`
-      );
+      const response = await fetch(`${API_BASE}/recommend?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error(`Search failed: ${response.statusText}`);
@@ -513,219 +648,284 @@ export default function App() {
   };
 
   return (
-    <Container maxW="container.xl" py="8">
-      <VStack gap="8" align="stretch">
-        <Heading size="lg">Clothing recommendations</Heading>
-        <Text color="fg.muted">
-          Add style profiles to get tailored recommendations. Each profile can
-          have its own description, price range, brand style, material, and
-          sizes.
-        </Text>
-
-        <Button
-          onClick={handleAddProfile}
-          colorPalette="blue"
-          className="add-profile-btn"
-        >
-          Add Style Profile
-        </Button>
-
-        {profiles.length === 0 ? (
-          <Box
-            py="10"
-            px="4"
-            borderRadius="md"
-            borderWidth="1px"
-            borderStyle="dashed"
-            color="fg.muted"
-            textAlign="center"
-            className="empty-profiles"
-          >
-            No style profiles yet. Click &quot;Add Style Profile&quot; to create
-            one.
-          </Box>
-        ) : (
-          <>
-            <Accordion.Root
-              multiple
-              collapsible
-              value={expandedIds}
-              onValueChange={(e) => setExpandedIds(e.value ?? [])}
-              className="profiles-accordion"
-            >
-              {profiles.map((profile, index) => (
-                <StyleProfileAccordionItem
-                  key={profile.id}
-                  profile={profile}
-                  index={index}
-                  onUpdate={handleUpdateProfile}
-                  onSaveSuccess={() =>
-                    setExpandedIds((prev) => prev.filter((id) => id !== profile.id))
-                  }
-                />
-              ))}
-            </Accordion.Root>
-
-            {/* Search Section */}
-            <Box
-              p="6"
-              borderRadius="lg"
-              borderWidth="1px"
-              bg="bg.subtle"
-              className="search-section"
-            >
-              <VStack gap="4" align="stretch">
-                <Heading size="md">Search for Items</Heading>
-                <Text color="fg.muted" fontSize="sm">
-                  Select a profile and search for matching clothing items on eBay
-                </Text>
-
-                <Field.Root>
-                  <Field.Label>Select Profile</Field.Label>
-                  <NativeSelect.Root>
-                    <NativeSelect.Field
-                      value={selectedProfileId}
-                      onChange={(e) => setSelectedProfileId(e.target.value)}
-                    >
-                      <option value="">Choose a profile...</option>
-                      {profiles.map((profile, index) => (
-                        <option key={profile.id} value={profile.id}>
-                          {profile.title.trim() || `Style profile ${index + 1}`}
-                        </option>
-                      ))}
-                    </NativeSelect.Field>
-                    <NativeSelect.Indicator />
-                  </NativeSelect.Root>
-                  <Field.HelperText>
-                    The selected profile's preferences will be used for the search
-                  </Field.HelperText>
-                </Field.Root>
-
-                <Button
-                  onClick={handleSearch}
-                  colorPalette="green"
-                  disabled={!selectedProfileId || isSearching}
-                  loading={isSearching}
-                  className="search-btn"
-                >
-                  <MdSearch />
-                  Search Items
-                </Button>
-
-                {searchError && (
-                  <Box
-                    p="3"
-                    borderRadius="md"
-                    bg="red.50"
-                    color="red.700"
-                    fontSize="sm"
-                  >
-                    {searchError}
-                  </Box>
-                )}
-              </VStack>
+    <Container maxW="container.xl" py="10">
+      {!authUser ? (
+        <Box maxW="md" mx="auto" borderWidth="1px" borderRadius="xl" p={{ base: "5", md: "7" }}>
+          <VStack gap="5" align="stretch">
+            <Box>
+              <Heading size="lg">Sign in</Heading>
+              <Text color="fg.muted" mt="1">
+                Create an account or log in to personalize recommendations.
+              </Text>
             </Box>
 
-            {/* Search Results */}
-            {isSearching && (
-              <Box textAlign="center" py="8">
-                <Spinner size="lg" colorPalette="blue" />
-                <Text mt="4" color="fg.muted">
-                  Searching for items...
-                </Text>
-              </Box>
-            )}
+            <RadioGroup.Root
+              value={authMode}
+              onValueChange={(e) => setAuthMode((e.value as "login" | "signup") ?? "login")}
+            >
+              <Grid templateColumns="1fr 1fr" gap="2">
+                <RadioGroup.Item value="login">
+                  <RadioGroup.ItemHiddenInput />
+                  <RadioGroup.ItemIndicator />
+                  <RadioGroup.ItemText>Login</RadioGroup.ItemText>
+                </RadioGroup.Item>
+                <RadioGroup.Item value="signup">
+                  <RadioGroup.ItemHiddenInput />
+                  <RadioGroup.ItemIndicator />
+                  <RadioGroup.ItemText>Sign up</RadioGroup.ItemText>
+                </RadioGroup.Item>
+              </Grid>
+            </RadioGroup.Root>
 
-            {!isSearching && searchResults.length > 0 && (
-              <Box>
-                <Heading size="md" mb="4">
-                  Search Results ({searchResults.length} items)
-                </Heading>
-                <Grid
-                  templateColumns="repeat(auto-fill, minmax(250px, 1fr))"
-                  gap="6"
-                  className="results-grid"
-                >
-                  {searchResults.map((item) => (
-                    <Box
-                      key={item.item.docId}
-                      borderRadius="lg"
-                      borderWidth="1px"
-                      overflow="hidden"
-                      bg="bg.surface"
-                      transition="all 0.2s"
-                      _hover={{
-                        transform: "translateY(-4px)",
-                        shadow: "lg",
-                      }}
-                      className="result-item"
-                    >
-                      {item.item.image_urls && (
-                        <Image
-                          src={item.item.image_urls[0]}
-                          alt={item.item.name}
-                          width="100%"
-                          height="200px"
-                          objectFit="cover"
-                        />
-                      )}
-                      <Box p="4">
-                        <Text
-                          fontWeight="semibold"
-                          fontSize="sm"
-                          lineClamp={2}
-                          mb="2"
-                          minHeight="40px"
-                        >
-                          {item.item.name}
-                        </Text>
-                        <Text
-                          fontSize="xl"
-                          fontWeight="bold"
-                          color="green.600"
-                          mb="2"
-                        >
-                          ${item.item.price} 
-                          {/* {item.item.currency} */}
-                        </Text>
-                        <Box display="flex" gap="2" mb="3" flexWrap="wrap">
-                          {item.item.material && (
-                            <Badge size="sm" colorPalette="blue">
-                              {item.item.material}
-                            </Badge>
-                          )}
-                          {/* {item.item.price !== null && (
-                            <Badge size="sm" colorPalette="gray">
-                              +${item.item.price} shipping
-                            </Badge>
-                          )} */}
-                        </Box>
-                        <Text fontSize="xs" color="fg.muted" mb="3">
-                          Seller: {item.item.brand_store}
-                        </Text>
-                        {/* <Button
-                          asChild
-                          size="sm"
-                          width="100%"
-                          colorPalette="blue"
-                        > */}
-                          {/* <a
-                            href={item.itemWebUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            View on eBay
-                          </a> */}
-                        {/* </Button> */}
-                      </Box>
-                    </Box>
-                  ))}
+            <Field.Root>
+              <Field.Label>Username</Field.Label>
+              <Input
+                value={authUsername}
+                onChange={(e) => setAuthUsername(e.target.value)}
+                placeholder="e.g. kaino"
+              />
+            </Field.Root>
+
+            <Field.Root>
+              <Field.Label>Password</Field.Label>
+              <Input
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                type="password"
+                placeholder="••••••••"
+              />
+            </Field.Root>
+
+            <Button onClick={submitAuth} colorPalette="blue" disabled={isAuthBusy}>
+              {isAuthBusy ? "…" : authMode === "signup" ? "Create account" : "Log in"}
+            </Button>
+
+            {authError && <Text color="red.500">{authError}</Text>}
+          </VStack>
+        </Box>
+      ) : (
+        <VStack gap="6" align="stretch">
+          <Grid templateColumns={{ base: "1fr", md: "360px 1fr" }} gap="6" alignItems="start">
+            {/* Left: profiles */}
+            <Box>
+              <Box borderWidth="1px" borderRadius="lg" p="4" mb="4">
+                <Grid templateColumns="1fr auto" gap="3" alignItems="center">
+                  <Box minW="0">
+                    <Text fontWeight="medium" truncate>
+                      Logged in as {authUser.username}
+                    </Text>
+                    <Text fontSize="sm" color="fg.muted">
+                      Manage your style profiles
+                    </Text>
+                  </Box>
+                  <Button onClick={logout} variant="outline" size="sm">
+                    Log out
+                  </Button>
                 </Grid>
               </Box>
-            )}
-          </>
-        )}
-      </VStack>
+
+              <Grid templateColumns="1fr" gap="2">
+                <Button onClick={handleAddProfile} colorPalette="blue" width="100%">
+                  Add Style Profile
+                </Button>
+              </Grid>
+
+              <Box mt="4">
+                {profiles.length === 0 ? (
+                  <Box
+                    py="10"
+                    px="4"
+                    borderRadius="md"
+                    borderWidth="1px"
+                    borderStyle="dashed"
+                    color="fg.muted"
+                    textAlign="center"
+                    className="empty-profiles"
+                  >
+                    No style profiles yet. Click &quot;Add Style Profile&quot; to create one.
+                  </Box>
+                ) : (
+                  <Accordion.Root
+                    multiple
+                    collapsible
+                    value={expandedIds}
+                    onValueChange={(e) => setExpandedIds(e.value ?? [])}
+                    className="profiles-accordion"
+                  >
+                    {profiles.map((profile, index) => (
+                      <StyleProfileAccordionItem
+                        key={profile.id}
+                        profile={profile}
+                        index={index}
+                        onUpdate={handleUpdateProfile}
+                        onDelete={handleDeleteProfile}
+                        onSaveSuccess={() =>
+                          setExpandedIds((prev) => prev.filter((id) => id !== profile.id))
+                        }
+                      />
+                    ))}
+                  </Accordion.Root>
+                )}
+              </Box>
+
+              <Box mt="4" borderWidth="1px" borderRadius="lg" p="4">
+                <Text fontWeight="medium" mb="2">
+                  Personal model stats
+                </Text>
+                {!selectedProfileId ? (
+                  <Text fontSize="sm" color="fg.muted">
+                    Select a profile to start interacting. The model shown is per-user.
+                  </Text>
+                ) : isLoadingPersonalModel ? (
+                  <Text fontSize="sm" color="fg.muted">
+                    Loading…
+                  </Text>
+                ) : (
+                  <Textarea
+                    value={personalModelJson || ""}
+                    readOnly
+                    rows={10}
+                    fontFamily="mono"
+                    fontSize="xs"
+                  />
+                )}
+              </Box>
+            </Box>
+
+            {/* Right: search + results */}
+            <Box>
+              <Heading size="lg" mb="2">
+                Clothing recommendations
+              </Heading>
+              <Text color="fg.muted" mb="4">
+                Pick a style profile on the left, then search and refine results here.
+              </Text>
+
+              <Box p="6" borderRadius="lg" borderWidth="1px" bg="bg.subtle" className="search-section">
+                <VStack gap="4" align="stretch">
+                  <Heading size="md">Search</Heading>
+                  <Field.Root>
+                    <Field.Label>Selected Profile</Field.Label>
+                    <NativeSelect.Root>
+                      <NativeSelect.Field
+                        value={selectedProfileId}
+                        onChange={(e) => setSelectedProfileId(e.target.value)}
+                      >
+                        <option value="">Choose a profile...</option>
+                        {profiles.map((profile, index) => (
+                          <option key={profile.id} value={profile.id}>
+                            {profile.title.trim() || `Style profile ${index + 1}`}
+                          </option>
+                        ))}
+                      </NativeSelect.Field>
+                      <NativeSelect.Indicator />
+                    </NativeSelect.Root>
+                  </Field.Root>
+
+                  <Button
+                    onClick={handleSearch}
+                    colorPalette="green"
+                    disabled={!selectedProfileId || isSearching}
+                    loading={isSearching}
+                    className="search-btn"
+                  >
+                    <MdSearch />
+                    Search Items
+                  </Button>
+
+                  {searchError && (
+                    <Box p="3" borderRadius="md" bg="red.50" color="red.700" fontSize="sm">
+                      {searchError}
+                    </Box>
+                  )}
+                </VStack>
+              </Box>
+
+              {isSearching && (
+                <Box textAlign="center" py="8">
+                  <Spinner size="lg" colorPalette="blue" />
+                  <Text mt="4" color="fg.muted">
+                    Searching for items...
+                  </Text>
+                </Box>
+              )}
+
+              {!isSearching && searchResults.length > 0 && (
+                <Box mt="6">
+                  <Heading size="md" mb="4">
+                    Results ({searchResults.length})
+                  </Heading>
+                  <Grid templateColumns="repeat(auto-fill, minmax(250px, 1fr))" gap="6" className="results-grid">
+                    {searchResults.map((item) => (
+                      <Box
+                        key={item.item.docId}
+                        borderRadius="lg"
+                        borderWidth="1px"
+                        overflow="hidden"
+                        bg="bg.surface"
+                        transition="all 0.2s"
+                        _hover={{ transform: "translateY(-4px)", shadow: "lg" }}
+                        className="result-item"
+                        onClick={() => trackInteraction("click", item.item)}
+                      >
+                        {item.item.image_urls && (
+                          <Image
+                            src={item.item.image_urls[0]}
+                            alt={item.item.name}
+                            width="100%"
+                            height="200px"
+                            objectFit="cover"
+                          />
+                        )}
+                        <Box p="4">
+                          <Text fontWeight="semibold" fontSize="sm" lineClamp={2} mb="2" minHeight="40px">
+                            {item.item.name}
+                          </Text>
+                          <Text fontSize="xl" fontWeight="bold" color="green.600" mb="2">
+                            ${item.item.price}
+                          </Text>
+                          <Box display="flex" gap="2" mb="3" flexWrap="wrap">
+                            {item.item.material && (
+                              <Badge size="sm" colorPalette="blue">
+                                {item.item.material}
+                              </Badge>
+                            )}
+                          </Box>
+                          <Text fontSize="xs" color="fg.muted" mb="3">
+                            Seller: {item.item.brand_store}
+                          </Text>
+                          <Grid templateColumns="1fr 1fr" gap="2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                trackInteraction("notMyStyle", item.item);
+                              }}
+                            >
+                              Not my style
+                            </Button>
+                            <Button
+                              size="sm"
+                              colorPalette="blue"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                trackInteraction("save", item.item);
+                              }}
+                            >
+                              Save
+                            </Button>
+                          </Grid>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Grid>
+                </Box>
+              )}
+            </Box>
+          </Grid>
+        </VStack>
+      )}
     </Container>
   );
 }

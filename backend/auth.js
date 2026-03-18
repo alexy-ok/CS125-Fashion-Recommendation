@@ -2,7 +2,6 @@ const crypto = require('crypto');
 const { findUserById, findUserByUsername, createUser } = require('./stores/usersStore');
 
 const SESSION_COOKIE = 'sid';
-const sessions = new Map(); // sid -> { userId, createdAt }
 
 function parseCookies(cookieHeader) {
   const out = {};
@@ -35,9 +34,9 @@ function getSessionUser(req) {
   const cookies = parseCookies(req.headers.cookie);
   const sid = cookies[SESSION_COOKIE];
   if (!sid) return null;
-  const sess = sessions.get(sid);
-  if (!sess) return null;
-  return findUserById(sess.userId);
+  // Simplest possible session: cookie value is the userId.
+  // Not secure for production; intended for local/dev simplicity.
+  return findUserById(sid);
 }
 
 function requireAuth(req, res, next) {
@@ -100,16 +99,11 @@ async function login(username, password) {
 }
 
 function createSessionForUser(res, userId) {
-  const sid = crypto.randomBytes(24).toString('hex');
-  sessions.set(sid, { userId, createdAt: Date.now() });
-  setSessionCookie(res, sid);
-  return sid;
+  setSessionCookie(res, String(userId));
+  return String(userId);
 }
 
 function destroySession(req, res) {
-  const cookies = parseCookies(req.headers.cookie);
-  const sid = cookies[SESSION_COOKIE];
-  if (sid) sessions.delete(sid);
   clearSessionCookie(res);
 }
 

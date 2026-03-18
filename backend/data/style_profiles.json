@@ -1,0 +1,82 @@
+{
+  "users": {
+    "fc3c4846-a343-485f-a252-89faaafad3f5": [
+      {
+        "id": "4febe440-59dd-4b97-bcc6-e97eb23ed0e9",
+        "title": "nike",
+        "description": "jacket",
+        "minPrice": "",
+        "maxPrice": "",
+        "brandPreference": null,
+        "material": "",
+        "shirtSize": "",
+        "pantsSize": ""
+      }
+    ],
+    "anon": [
+      {
+        "id": "ecfe2752-e255-414b-a7c5-7b7eda4039a2",
+        "title": "nike",
+        "description": "nike jacket",
+        "minPrice": "",
+        "maxPrice": "",
+        "brandPreference": null,
+        "material": "",
+        "shirtSize": "",
+        "pantsSize": ""
+      }
+    ],
+    "anon_c36aabe2-1a7c-4ed5-8bf4-a1326cf4b8e1": [
+      {
+        "id": "ecfe2752-e255-414b-a7c5-7b7eda4039a2",
+        "title": "nike",
+        "description": "",
+        "minPrice": "",
+        "maxPrice": "",
+        "brandPreference": null,
+        "material": "",
+        "shirtSize": "",
+        "pantsSize": ""
+      }
+    ],
+    "d9632f2a-9ef7-4083-a62e-5fd4cd5f1e77": [
+      {
+        "id": "4febe440-59dd-4b97-bcc6-e97eb23ed0e9",
+        "title": "nike",
+        "description": "jacket",
+        "minPrice": "",
+        "maxPrice": "",
+        "brandPreference": null,
+        "material": "",
+        "shirtSize": "",
+        "pantsSize": ""
+      }
+    ],
+    "anon_b08a2387-31b5-4a18-98c6-265b4dc73037": [
+      {
+        "id": "4febe440-59dd-4b97-bcc6-e97eb23ed0e9",
+        "title": "nike",
+        "description": "jacket",
+        "minPrice": "",
+        "maxPrice": "",
+        "brandPreference": null,
+        "material": "",
+        "shirtSize": "",
+        "pantsSize": ""
+      }
+    ],
+    "5c27b7ba-cf31-4530-b218-3382c13a05b3": [
+      {
+        "id": "4febe440-59dd-4b97-bcc6-e97eb23ed0e9",
+        "title": "nike",
+        "description": "jacket",
+        "minPrice": "",
+        "maxPrice": "",
+        "brandPreference": null,
+        "material": "",
+        "shirtSize": "",
+        "pantsSize": ""
+      }
+    ]
+  }
+}

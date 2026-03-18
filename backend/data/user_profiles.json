@@ -32,19 +32,21 @@
       "likedBrands": {
         "Nike": 17.524924448437496,
         "COS": 6.511366589062498,
-        "nike": 4
+        "nike": 52,
+        "puma": 136,
+        "zara": 14
       },
       "likedCategories": {
         "hoodie": 6.395299448437497,
         "blazer": 6.511366589062498,
         "pants": 11.129624999999999,
-        "jacket": 2,
+        "jacket": 200,
         "t-shirt": 2
       },
       "likedColors": {},
       "likedTerms": {
         "nike": 32.65454944843749,
-        "black": 26.920223896874997,
+        "black": 50.920223896875,
         "tech": 35.04984889687499,
         "fleece": 12.790598896874995,
         "hoodie": 12.790598896874995,
@@ -58,10 +60,10 @@
         "minimal": 6.511366589062498,
         "tailored": 6.511366589062498,
         "officewear": 6.511366589062498,
-        "men": 22.259249999999998,
-        "woven": 22.259249999999998,
+        "men": 206.25925,
+        "woven": 70.25925,
         "pants": 22.259249999999998,
-        "color": 13.129624999999999,
+        "color": 37.129625,
         "anthracite": 2.5721249999999993,
         "cannon": 2.7074999999999996,
         "mosswood": 2.8499999999999996,
@@ -70,16 +72,23 @@
         "sage": 3,
         "sb": 2,
         "skate": 2,
-        "jacket": 2,
+        "jacket": 200,
         "white": 1,
         "sportswear": 2,
-        "shirt": 2
+        "shirt": 2,
+        "kobe": 48,
+        "clrt": 136,
+        "knit": 14,
+        "bomber": 14
       },
       "dislikedBrands": {
-        "Zara": 2.443518749999999
+        "Zara": 2.443518749999999,
+        "puma": 132,
+        "zara": 18
       },
       "dislikedCategories": {
-        "other": 2.443518749999999
+        "other": 2.443518749999999,
+        "jacket": 104.99999999999996
       },
       "dislikedTerms": {
         "tailored": 4.887037499999998,
@@ -87,13 +96,18 @@
         "with": 4.887037499999998,
         "wool": 4.887037499999998,
         "zw": 4.887037499999998,
-        "collection": 4.887037499999998
+        "collection": 4.887037499999998,
+        "clrt": 92.4,
+        "men": 92.4,
+        "jacket": 105.0000000000001,
+        "knit": 12.600000000000005,
+        "bomber": 12.600000000000005
       },
       "priceRange": {
-        "min": 28.97,
-        "max": 172.229648
+        "min": 45.99,
+        "max": 140
       },
-      "updatedAt": 1773862647592
+      "updatedAt": 1773864281092
     },
     "anon": {
       "likedBrands": {},
@@ -101,20 +115,194 @@
       "likedColors": {},
       "likedTerms": {},
       "dislikedBrands": {
-        "nike": 1.5
+        "nike": 3
       },
       "dislikedCategories": {
-        "t-shirt": 1.0499999999999998
+        "t-shirt": 1.0499999999999998,
+        "jacket": 1.0499999999999998
       },
       "dislikedTerms": {
-        "nike": 1.0499999999999998,
+        "nike": 2.0999999999999996,
         "sportswear": 1.0499999999999998,
         "shirt": 1.0499999999999998,
-        "color": 0.5249999999999999,
-        "black": 0.5249999999999999
+        "color": 1.0499999999999998,
+        "black": 1.5749999999999997,
+        "sb": 1.0499999999999998,
+        "skate": 1.0499999999999998,
+        "jacket": 1.0499999999999998,
+        "white": 0.5249999999999999
       },
       "priceRange": null,
-      "updatedAt": 1773862651984
+      "updatedAt": 1773862832831
+    },
+    "anon_c36aabe2-1a7c-4ed5-8bf4-a1326cf4b8e1": {
+      "likedBrands": {
+        "puma": 2,
+        "zara": 2
+      },
+      "likedCategories": {
+        "jacket": 4
+      },
+      "likedColors": {},
+      "likedTerms": {
+        "clrt": 2,
+        "men": 2,
+        "jacket": 4,
+        "knit": 2,
+        "bomber": 2
+      },
+      "dislikedBrands": {
+        "puma": 7.5
+      },
+      "dislikedCategories": {
+        "jacket": 5.249999999999999
+      },
+      "dislikedTerms": {
+        "clrt": 3.1499999999999995,
+        "men": 5.25,
+        "jacket": 5.25,
+        "bmw": 1.0499999999999998,
+        "motorsport": 1.0499999999999998,
+        "t7": 1.0499999999999998,
+        "track": 1.0499999999999998
+      },
+      "priceRange": {
+        "min": 45.99,
+        "max": 136.2396
+      },
+      "updatedAt": 1773863033882
+    },
+    "anon_495455a3-f424-4085-8bf9-d09d5f902a2d": {
+      "likedBrands": {
+        "puma": 10.375
+      },
+      "likedCategories": {
+        "jacket": 10.224999999999998
+      },
+      "likedColors": {},
+      "likedTerms": {
+        "clrt": 10.224999999999998,
+        "men": 10.224999999999998,
+        "jacket": 10.224999999999998
+      },
+      "dislikedBrands": {
+        "puma": 21
+      },
+      "dislikedCategories": {
+        "jacket": 14.700000000000003
+      },
+      "dislikedTerms": {
+        "clrt": 14.700000000000006,
+        "men": 14.700000000000006,
+        "jacket": 14.700000000000006
+      },
+      "priceRange": {
+        "min": 140,
+        "max": 140
+      },
+      "updatedAt": 1773863147914
+    },
+    "anon_b08a2387-31b5-4a18-98c6-265b4dc73037": {
+      "likedBrands": {
+        "puma": 14,
+        "zara": 2
+      },
+      "likedCategories": {
+        "jacket": 16
+      },
+      "likedColors": {},
+      "likedTerms": {
+        "clrt": 14,
+        "men": 14,
+        "jacket": 16,
+        "knit": 2,
+        "bomber": 2
+      },
+      "dislikedBrands": {
+        "puma": 15
+      },
+      "dislikedCategories": {
+        "jacket": 10.5
+      },
+      "dislikedTerms": {
+        "clrt": 10.500000000000004,
+        "men": 10.500000000000004,
+        "jacket": 10.500000000000004
+      },
+      "priceRange": {
+        "min": 45.99,
+        "max": 136.2396
+      },
+      "updatedAt": 1773863854294
+    },
+    "d9632f2a-9ef7-4083-a62e-5fd4cd5f1e77": {
+      "likedBrands": {
+        "puma": 248,
+        "zara": 40
+      },
+      "likedCategories": {
+        "jacket": 288
+      },
+      "likedColors": {},
+      "likedTerms": {
+        "clrt": 248,
+        "men": 248,
+        "jacket": 288,
+        "knit": 40,
+        "bomber": 40
+      },
+      "dislikedBrands": {
+        "puma": 270,
+        "zara": 7.5
+      },
+      "dislikedCategories": {
+        "jacket": 194.25000000000006
+      },
+      "dislikedTerms": {
+        "clrt": 189.00000000000003,
+        "men": 189.00000000000003,
+        "jacket": 194.25000000000009,
+        "knit": 5.25,
+        "bomber": 5.25
+      },
+      "priceRange": {
+        "min": 45.99,
+        "max": 122.64318730137599
+      },
+      "updatedAt": 1773864348101
+    },
+    "5c27b7ba-cf31-4530-b218-3382c13a05b3": {
+      "likedBrands": {
+        "puma": 30,
+        "zara": 10
+      },
+      "likedCategories": {
+        "jacket": 40
+      },
+      "likedColors": {},
+      "likedTerms": {
+        "clrt": 30,
+        "men": 30,
+        "jacket": 40,
+        "knit": 10,
+        "bomber": 10
+      },
+      "dislikedBrands": {
+        "puma": 30
+      },
+      "dislikedCategories": {
+        "jacket": 21
+      },
+      "dislikedTerms": {
+        "clrt": 21.000000000000007,
+        "men": 21.000000000000007,
+        "jacket": 21.000000000000007
+      },
+      "priceRange": {
+        "min": 45.99,
+        "max": 132.629616
+      },
+      "updatedAt": 1773864361728
     }
   }
 }

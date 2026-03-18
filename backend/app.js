@@ -1,15 +1,57 @@
 require('dotenv').config();
 const express = require('express');
+const crypto = require('crypto');
 const multer = require('multer');
 const path = require('path');
 const { GoogleGenerativeAI, SchemaType } = require('@google/generative-ai');
 const { searchProducts, getItemDetails } = require('./ebay');
 const { loadAndBuildIndex } = require('./indexer');
 const { recommend } = require('./recommender');
-const { getSessionUser, signup, login, createSessionForUser, destroySession } = require('./auth');
+const { getSessionUser, parseCookies, signup, login, createSessionForUser, destroySession } = require('./auth');
 const { getUserModel, upsertUserModel } = require('./stores/profilesStore');
 const { createEmptyProfile, applyEvent } = require('./personalModel');
 const { getStyleProfiles, setStyleProfiles } = require('./stores/styleProfilesStore');
+
+function mergeModels(a, b) {
+  const out = a ? JSON.parse(JSON.stringify(a)) : null;
+  if (!out) return b ? JSON.parse(JSON.stringify(b)) : null;
+  if (!b) return out;
+
+  const mergeMap = (m1, m2) => {
+    const r = { ...(m1 || {}) };
+    for (const [k, v] of Object.entries(m2 || {})) r[k] = (r[k] || 0) + Number(v || 0);
+    return r;
+  };
+
+  out.likedBrands = mergeMap(out.likedBrands, b.likedBrands);
+  out.likedCategories = mergeMap(out.likedCategories, b.likedCategories);
+  out.likedColors = mergeMap(out.likedColors, b.likedColors);
+  out.likedTerms = mergeMap(out.likedTerms, b.likedTerms);
+  out.dislikedBrands = mergeMap(out.dislikedBrands, b.dislikedBrands);
+  out.dislikedCategories = mergeMap(out.dislikedCategories, b.dislikedCategories);
+  out.dislikedTerms = mergeMap(out.dislikedTerms, b.dislikedTerms);
+
+  if (out.priceRange && b.priceRange) {
+    out.priceRange = {
+      min: Math.min(out.priceRange.min, b.priceRange.min),
+      max: Math.max(out.priceRange.max, b.priceRange.max),
+    };
+  } else {
+    out.priceRange = out.priceRange || b.priceRange || null;
+  }
+
+  out.updatedAt = Math.max(Number(out.updatedAt || 0), Number(b.updatedAt || 0));
+  return out;
+}
+
+function mergeStyleProfiles(existing, incoming) {
+  const a = Array.isArray(existing) ? existing : [];
+  const b = Array.isArray(incoming) ? incoming : [];
+  const map = new Map();
+  for (const p of a) if (p && p.id) map.set(String(p.id), p);
+  for (const p of b) if (p && p.id) map.set(String(p.id), p);
+  return Array.from(map.values());
+}
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -51,7 +93,7 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
   }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, X-User-Id');
   res.header('Access-Control-Allow-Credentials', 'true');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
@@ -68,6 +110,37 @@ app.use((req, _res, next) => {
   next();
 });
 
+function setUidCookie(res, uid) {
+  // Lightweight, persistent anon identity. Not HttpOnly so it’s easy to debug,
+  // but we still don’t treat it as security—just a stable key.
+  res.setHeader('Set-Cookie', `uid=${encodeURIComponent(uid)}; Path=/; SameSite=Lax; Max-Age=31536000`);
+}
+
+app.use((req, res, next) => {
+  // Use a single deterministic key for personalization/profile storage.
+  // Prefer explicit client id (works across cross-origin cookie quirks),
+  // then fall back to logged-in user id, then to a stable anon cookie.
+  if (req.user?.id) {
+    req.effectiveUserId = req.user.id;
+    return next();
+  }
+
+  const headerUid = req.headers['x-user-id'] ? String(req.headers['x-user-id']) : '';
+  if (headerUid) {
+    req.effectiveUserId = headerUid;
+    return next();
+  }
+
+  const cookies = parseCookies(req.headers.cookie);
+  let uid = cookies.uid ? String(cookies.uid) : '';
+  if (!uid) {
+    uid = `anon_${crypto.randomUUID()}`;
+    setUidCookie(res, uid);
+  }
+  req.effectiveUserId = uid;
+  next();
+});
+
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const { username, password } = req.body || {};
@@ -79,6 +152,20 @@ app.post('/api/auth/signup', async (req, res) => {
     const created = await signup(String(username).trim(), String(password));
     console.log("created: ", created);
     createSessionForUser(res, created.id);
+
+    const anonId = req.headers['x-user-id'] ? String(req.headers['x-user-id']) : '';
+    if (anonId && anonId !== created.id) {
+      const anonModel = getUserModel(anonId);
+      const userModel = getUserModel(created.id);
+      const merged = mergeModels(userModel || createEmptyProfile(), anonModel || null);
+      if (merged) upsertUserModel(created.id, merged);
+
+      const anonProfiles = getStyleProfiles(anonId);
+      const userProfiles = getStyleProfiles(created.id);
+      const mergedProfiles = mergeStyleProfiles(userProfiles, anonProfiles);
+      setStyleProfiles(created.id, mergedProfiles);
+    }
+
     return res.json({ user: created });
   } catch (e) {
     console.error('Signup error:', e.message);
@@ -94,6 +181,20 @@ app.post('/api/auth/login', async (req, res) => {
     }
     const user = await login(String(username).trim(), String(password));
     createSessionForUser(res, user.id);
+
+    const anonId = req.headers['x-user-id'] ? String(req.headers['x-user-id']) : '';
+    if (anonId && anonId !== user.id) {
+      const anonModel = getUserModel(anonId);
+      const userModel = getUserModel(user.id);
+      const merged = mergeModels(userModel || createEmptyProfile(), anonModel || null);
+      if (merged) upsertUserModel(user.id, merged);
+
+      const anonProfiles = getStyleProfiles(anonId);
+      const userProfiles = getStyleProfiles(user.id);
+      const mergedProfiles = mergeStyleProfiles(userProfiles, anonProfiles);
+      setStyleProfiles(user.id, mergedProfiles);
+    }
+
     return res.json({ user });
   } catch (e) {
     return res.status(e.status || 500).json({ error: e.message || 'Login failed' });
@@ -112,7 +213,7 @@ app.get('/api/auth/me', (req, res) => {
 
 app.get('/api/style-profiles', (req, res) => {
   try {
-    const userId = req.user?.id || 'anon';
+    const userId = req.effectiveUserId;
     const profiles = getStyleProfiles(userId);
     return res.json({ userId, profiles });
   } catch (error) {
@@ -123,7 +224,7 @@ app.get('/api/style-profiles', (req, res) => {
 
 app.put('/api/style-profiles', (req, res) => {
   try {
-    const userId = req.user?.id || 'anon';
+    const userId = req.effectiveUserId;
     const { profiles } = req.body || {};
     if (!Array.isArray(profiles)) {
       return res.status(400).json({ error: 'profiles must be an array' });
@@ -230,10 +331,7 @@ app.get('/api/recommend', (req, res) => {
     if (shirt_size) filters.shirt_size = shirt_size;
     if (pant_size) filters.pant_size = pant_size;
     
-    let profile = null;
-    if (req.user) {
-      profile = getUserModel(req.user.id) || null;
-    }
+    const profile = getUserModel(req.effectiveUserId) || null;
 
     const results = recommend(
       recommendationIndex, 
@@ -264,11 +362,11 @@ app.post('/api/profile-interaction', (req, res) => {
     if (!item || typeof item !== 'object') return res.status(400).json({ error: 'item is required' });
     if (!eventType) return res.status(400).json({ error: 'eventType is required' });
 
-    const userId = req.user?.id || 'anon';
+    const userId = req.effectiveUserId;
     const current = getUserModel(userId) || createEmptyProfile();
     const updated = applyEvent(current, item, String(eventType));
     upsertUserModel(userId, updated);
-    return res.json({ ok: true, model: updated });
+    return res.json({ ok: true, userId, model: updated });
   } catch (error) {
     console.error('Profile interaction error:', error);
     return res.status(500).json({ error: error.message || 'Profile update failed' });
@@ -277,7 +375,7 @@ app.post('/api/profile-interaction', (req, res) => {
 
 app.get('/api/user-model', (req, res) => {
   try {
-    const userId = req.user?.id || 'anon';
+    const userId = req.effectiveUserId;
     const model = getUserModel(userId) || createEmptyProfile();
     return res.json({ userId, model });
   } catch (error) {

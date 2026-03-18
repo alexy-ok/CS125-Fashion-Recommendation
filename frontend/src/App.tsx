@@ -21,6 +21,25 @@ import {
 import { MdEdit, MdSearch } from "react-icons/md";
 
 const API_BASE = "http://localhost:3000/api";
+const CLIENT_UID_KEY = "fashionrec_uid";
+
+const CLIENT_UID = (() => {
+  // Ensure the app uses a single stable id for all requests.
+  // localStorage is best-effort; if it fails, we still keep a stable in-memory uid.
+  const fallback = `anon_${crypto.randomUUID()}`;
+  try {
+    const existing = localStorage.getItem(CLIENT_UID_KEY);
+    if (existing) return existing;
+    localStorage.setItem(CLIENT_UID_KEY, fallback);
+    return fallback;
+  } catch {
+    return fallback;
+  }
+})();
+
+function getClientUid() {
+  return CLIENT_UID;
+}
 
 export interface ClothingProfile {
   id: string;
@@ -429,6 +448,7 @@ export default function App() {
     try {
       const res = await fetch(`${API_BASE}/style-profiles`, {
         credentials: "include",
+        headers: { "X-User-Id": getClientUid() },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load style profiles");
@@ -442,7 +462,7 @@ export default function App() {
     try {
       await fetch(`${API_BASE}/style-profiles`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-User-Id": getClientUid() },
         credentials: "include",
         body: JSON.stringify({ profiles: nextProfiles }),
       });
@@ -455,6 +475,7 @@ export default function App() {
     try {
       const res = await fetch(`${API_BASE}/auth/me`, {
         credentials: "include",
+        headers: { "X-User-Id": getClientUid() },
       });
       if (!res.ok) {
         setAuthUser(null);
@@ -479,7 +500,7 @@ export default function App() {
       console.log("endpoint: ", `${API_BASE}${endpoint}`);
       const res = await fetch(`${API_BASE}${endpoint}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-User-Id": getClientUid() },
         credentials: "include",
         body: JSON.stringify({
           username: authUsername.trim(),
@@ -503,6 +524,7 @@ export default function App() {
       await fetch(`${API_BASE}/auth/logout`, {
         method: "POST",
         credentials: "include",
+        headers: { "X-User-Id": getClientUid() },
       });
     } finally {
       setAuthUser(null);
@@ -520,7 +542,7 @@ export default function App() {
     try {
       await fetch(`${API_BASE}/profile-interaction`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-User-Id": getClientUid() },
         credentials: "include",
         body: JSON.stringify({
           eventType,
@@ -540,6 +562,7 @@ export default function App() {
     try {
       const res = await fetch(`${API_BASE}/user-model`, {
         credentials: "include",
+        headers: { "X-User-Id": getClientUid() },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load personal model");
@@ -663,6 +686,7 @@ export default function App() {
 
       const response = await fetch(`${API_BASE}/recommend?${params.toString()}`, {
         credentials: "include",
+        headers: { "X-User-Id": getClientUid() },
       });
 
       if (!response.ok) {

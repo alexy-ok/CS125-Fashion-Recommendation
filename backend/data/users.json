@@ -89,6 +89,15 @@
         "hash": "6444cae03067f6c0d488f948dbe4b7f8b6a2265fd732bfef26dbf75b1c294e36f843e524a3bb4828a2bf42d786dc254e197e774396311acb4321e875503714e8"
       },
       "createdAt": 1773864320266
+    },
+    {
+      "id": "ebd877f3-818c-43e2-80b3-1a0e98837053",
+      "username": "alexy",
+      "password": {
+        "salt": "38ee998255b893d3a846bc9eeb962afd",
+        "hash": "8da0b7602ea4d208fc93fd394e44b2d113c0da56941da9f548baa4d7ca6f9127f2a634ba9406a5e77dcb902bdc3ddff63f957c9f185be0f9fde29081dbeef7d0"
+      },
+      "createdAt": 1773877215992
     }
   ]
 }

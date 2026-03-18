@@ -77,6 +77,19 @@
         "shirtSize": "",
         "pantsSize": ""
       }
+    ],
+    "ebd877f3-818c-43e2-80b3-1a0e98837053": [
+      {
+        "id": "eb598878-69d8-4422-b0b4-e9156ce69732",
+        "title": "",
+        "description": "a",
+        "minPrice": "",
+        "maxPrice": "",
+        "brandPreference": null,
+        "material": "",
+        "shirtSize": "",
+        "pantsSize": ""
+      }
     ]
   }
 }

@@ -177,7 +177,8 @@ async function recommendWithVisualScoring(ctx, query, filters = {}, limit = 20, 
       bm25Score: item.bm25Score,
       visualScore: item.visualScore,
       normalizedBM25Score,
-      normalizedVisualScore
+      normalizedVisualScore,
+      comments: item.comments
     };
   });
   

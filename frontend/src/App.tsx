@@ -19,6 +19,7 @@ import {
   Badge,
 } from "@chakra-ui/react";
 import { MdEdit, MdSearch } from "react-icons/md";
+import { Tooltip } from "./components/ui/tooltip";
 
 const API_BASE = "http://localhost:3000/api";
 const CLIENT_UID_KEY = "fashionrec_uid";
@@ -58,6 +59,7 @@ export interface SearchResult {
     brand_store: string,
     category: string,
     data_source: string,
+    comments?: string,
     description: string,
     docId: number,
     image_urls: string[],
@@ -67,17 +69,11 @@ export interface SearchResult {
     sizes: string[],
   }
   score: number
-  // id: string;
-  // title: string;
-  // price: number;
-  // currency: string;
-  // image: string;
-  // condition: string;
-  // itemWebUrl: string;
-  // seller: string;
-  // shippingCost: string | number;
-
-
+  bm25Score: number,
+  visualScore: number,
+  normalizedBM25Score: number,
+  normalizedVisualScore: number,
+  comments: string,
 }
 
 type AuthUser = { id: string; username: string };
@@ -957,67 +953,82 @@ export default function App() {
                     {searchResults
                       .filter(item => !hiddenItemIds.has(item.item.docId))
                       .map((item) => (
-                      <Box
+                      <Tooltip
                         key={item.item.docId}
-                        borderRadius="lg"
-                        borderWidth="1px"
-                        overflow="hidden"
-                        bg="bg.surface"
-                        transition="all 0.2s"
-                        _hover={{ transform: "translateY(-4px)", shadow: "lg" }}
-                        className="result-item"
-                        onClick={() => trackInteraction("click", item.item)}
+                        content={
+                          item.comments ? (
+                            <Box maxW="320px" whiteSpace="pre-wrap">
+                              <Text fontSize="sm">{item.comments}</Text>
+                            </Box>
+                          ) : (
+                            ""
+                          )
+                        }
+                        disabled={!item.comments}
+                        showArrow
+                        positioning={{ placement: "top" }}
                       >
-                        {item.item.image_urls && (
-                          <Image
-                            src={item.item.image_urls[0]}
-                            alt={item.item.name}
-                            width="100%"
-                            height="200px"
-                            objectFit="cover"
-                          />
-                        )}
-                        <Box p="4">
-                          <Text fontWeight="semibold" fontSize="sm" lineClamp={2} mb="2" minHeight="40px">
-                            {item.item.name}
-                          </Text>
-                          <Text fontSize="xl" fontWeight="bold" color="green.600" mb="2">
-                            ${item.item.price}
-                          </Text>
-                          <Box display="flex" gap="2" mb="3" flexWrap="wrap">
-                            {item.item.material && (
-                              <Badge size="sm" colorPalette="blue">
-                                {item.item.material}
-                              </Badge>
-                            )}
+                        <Box
+                          borderRadius="lg"
+                          borderWidth="1px"
+                          overflow="hidden"
+                          bg="bg.surface"
+                          transition="all 0.2s"
+                          _hover={{ transform: "translateY(-4px)", shadow: "lg" }}
+                          className="result-item"
+                          onClick={() => trackInteraction("click", item.item)}
+                        >
+                          {item.item.image_urls && (
+                            <Image
+                              src={item.item.image_urls[0]}
+                              alt={item.item.name}
+                              width="100%"
+                              height="200px"
+                              objectFit="cover"
+                            />
+                          )}
+                          <Box p="4">
+                            <Text fontWeight="semibold" fontSize="sm" lineClamp={2} mb="2" minHeight="40px">
+                              {item.item.name}
+                            </Text>
+                            <Text fontSize="xl" fontWeight="bold" color="green.600" mb="2">
+                              ${item.item.price}
+                            </Text>
+                            <Box display="flex" gap="2" mb="3" flexWrap="wrap">
+                              {item.item.material && (
+                                <Badge size="sm" colorPalette="blue">
+                                  {item.item.material}
+                                </Badge>
+                              )}
+                            </Box>
+                            <Text fontSize="xs" color="fg.muted" mb="3">
+                              Seller: {item.item.brand_store}
+                            </Text>
+                            <Grid templateColumns="1fr 1fr" gap="2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  trackInteraction("notMyStyle", item.item);
+                                }}
+                              >
+                                Not my style
+                              </Button>
+                              <Button
+                                size="sm"
+                                colorPalette="blue"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  trackInteraction("save", item.item);
+                                }}
+                              >
+                                Save
+                              </Button>
+                            </Grid>
                           </Box>
-                          <Text fontSize="xs" color="fg.muted" mb="3">
-                            Seller: {item.item.brand_store}
-                          </Text>
-                          <Grid templateColumns="1fr 1fr" gap="2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                trackInteraction("notMyStyle", item.item);
-                              }}
-                            >
-                              Not my style
-                            </Button>
-                            <Button
-                              size="sm"
-                              colorPalette="blue"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                trackInteraction("save", item.item);
-                              }}
-                            >
-                              Save
-                            </Button>
-                          </Grid>
                         </Box>
-                      </Box>
+                      </Tooltip>
                     ))}
                   </Grid>
                 </Box>

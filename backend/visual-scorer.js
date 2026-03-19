@@ -117,8 +117,8 @@ async function scoreImageZotGPT(imageUrl, description) {
       return null;
     }
 
-    const prompt = `I will give you a description of clothing styles I'm looking for. Tell me if the image I attach fits the style.
-Then give a score from 1-5 where 1 is no match at all and 5 is a perfect match.
+    const prompt = `I will give you a description of clothing styles I'm looking for and an image of a clothing item. Score the image based on the description
+    from 1-5 where 1 is no match at all and 5 is a perfect match in the "score" field of the JSON response. Then give a 1-2 sentence explanation of why you gave the score you did in the "comments" field of the JSON response.
 Description: ${description}`;
 
     // ZotGPT's chat schema uses an `image_url` content part; base64 must be passed as a data URI.
@@ -165,8 +165,10 @@ Description: ${description}`;
       parsed = content; // Some SDKs may already parse JSON if response_format is enabled.
     }
 
+    console.log('parsed:', parsed);
+
     const score = parsed?.score;
-    if (typeof score === 'number' && score >= 1 && score <= 5) return score;
+    if (typeof score === 'number' && score >= 1 && score <= 5) return parsed;
 
     return null;
   } catch (error) {
@@ -199,12 +201,16 @@ async function scoreImageBatch(items, description) {
     }
 
     // const visualScore = await scoreImage(imageUrl, description);
-    const visualScore = await scoreImageZotGPT(imageUrl, description);
-    return { item, bm25Score, visualScore };
+    const result = await scoreImageZotGPT(imageUrl, description);
+    const visualScore = result?.score;
+    const comments = result?.comments;
+    console.log('comments:', comments);
+    console.log('visualScore:', visualScore);
+    return { item, bm25Score, visualScore, comments };
   });
 
   const results = await Promise.all(scoringPromises);
-  
+  console.log('results:', results);
   const elapsed = Date.now() - startTime;
   const successCount = results.filter(r => r.visualScore !== null).length;
   console.log(`Visual scoring completed: ${successCount}/${items.length} successful in ${elapsed}ms`);

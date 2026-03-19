@@ -445,6 +445,66 @@
         "max": 39.648496640000005
       },
       "updatedAt": 1773877609124
+    },
+    "f352b2dc-6a11-4dbe-b8d7-51f27991fa79": {
+      "likedBrands": {
+        "zara": 6,
+        "pull&bear": 2.125
+      },
+      "likedCategories": {
+        "jacket": 8.075
+      },
+      "likedColors": {},
+      "likedTerms": {
+        "z1975": 2,
+        "denim": 8.075,
+        "bomber": 2,
+        "jacket": 8.075,
+        "faux": 2,
+        "leather": 2,
+        "trucker": 2,
+        "with": 3.075,
+        "front": 1.0375,
+        "pockets": 1.0375,
+        "metallic": 1.0375,
+        "button": 1.0375,
+        "fastening": 1.0375,
+        "seam": 1,
+        "detail": 1,
+        "and": 1.0375,
+        "long": 1,
+        "sleeves": 1,
+        "total": 1,
+        "look": 1,
+        "trf": 2,
+        "hearts": 2,
+        "contrast": 0.075,
+        "collar": 0.075,
+        "combination": 0.0375,
+        "made": 0.0375,
+        "of": 0.0375,
+        "cotton": 0.0375
+      },
+      "dislikedBrands": {
+        "zara": 4.5
+      },
+      "dislikedCategories": {
+        "jacket": 1.0499999999999998,
+        "shirt": 2.0999999999999996
+      },
+      "dislikedTerms": {
+        "z1975": 1.0499999999999998,
+        "combined": 1.0499999999999998,
+        "denim": 3.1499999999999995,
+        "jacket": 1.0499999999999998,
+        "trf": 2.0999999999999996,
+        "shirt": 2.0999999999999996
+      },
+      "priceRange": {
+        "min": 46.1992,
+        "max": 68.207008
+      },
+      "updatedAt": 1773887040050
     }
   }
 }

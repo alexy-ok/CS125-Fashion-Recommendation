@@ -93,6 +93,94 @@ Description: ${description}`;
 }
 
 /**
+ * Score a single clothing item image against a description using ZotGPT (Azure OpenAI).
+ * Mirrors `scoreImage()` but calls:
+ * POST /deployments/{deployment-id}/chat/completions
+ *
+ * @param {string} imageUrl - URL of the clothing item image
+ * @param {string} description - User's style description/query
+ * @returns {Promise<number | null>} Score from 1-5, or null if scoring failed
+ */
+async function scoreImageZotGPT(imageUrl, description) {
+  try {
+    const imageData = await fetchImageAsBase64(imageUrl);
+    if (!imageData) return null;
+
+    const zotBaseUrl = process.env.ZOTGPT_BASE_URL || 'https://azureapi.zotgpt.uci.edu/openai';
+    const deploymentId = process.env.ZOTGPT_DEPLOYMENT_ID || 'gpt-4o';
+    const apiVersion = process.env.ZOTGPT_API_VERSION || '2024-02-01';
+
+    // The OpenAPI spec allows auth via header `api-key`.
+    const apiKey = process.env.ZOTGPT_API_KEY || process.env.AZURE_OPENAI_API_KEY;
+    if (!apiKey) {
+      console.warn('ZOTGPT_API_KEY/AZURE_OPENAI_API_KEY not set; cannot score with ZotGPT.');
+      return null;
+    }
+
+    const prompt = `I will give you a description of clothing styles I'm looking for. Tell me if the image I attach fits the style.
+Then give a score from 1-5 where 1 is no match at all and 5 is a perfect match.
+Description: ${description}`;
+
+    // ZotGPT's chat schema uses an `image_url` content part; base64 must be passed as a data URI.
+    const imageDataUri = `data:${imageData.mimeType};base64,${imageData.data}`;
+
+    const url = `${zotBaseUrl}/deployments/${encodeURIComponent(deploymentId)}/chat/completions`;
+
+    const body = {
+      temperature: 0.2,
+      max_tokens: 256,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are a fashion style matching assistant. Return ONLY valid JSON with keys "comments" (string) and "score" (integer 1-5).',
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: imageDataUri } },
+          ],
+        },
+      ],
+    };
+
+    const result = await axios.post(`${url}?api-version=${encodeURIComponent(apiVersion)}`, body, {
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': apiKey,
+      },
+      timeout: 30000,
+    });
+
+    // Typical shape: { choices: [ { message: { content: "<json>" } } ] }
+    const content = result?.data?.choices?.[0]?.message?.content;
+    if (!content) return null;
+
+    let parsed;
+    if (typeof content === 'string') {
+      parsed = JSON.parse(content.trim());
+    } else {
+      parsed = content; // Some SDKs may already parse JSON if response_format is enabled.
+    }
+
+    const score = parsed?.score;
+    if (typeof score === 'number' && score >= 1 && score <= 5) return score;
+
+    return null;
+  } catch (error) {
+    const status = error?.response?.status;
+    const data = error?.response?.data;
+    console.warn(
+      `Failed to score image ${imageUrl} with ZotGPT: ${status || ''} ${error.message}`,
+      data ? JSON.stringify(data).slice(0, 4000) : ''
+    );
+    return null;
+  }
+}
+
+/**
  * Score multiple clothing item images in parallel
  * @param {Array<{item: object, score: number}>} items - Items with BM25 scores
  * @param {string} description - User's style description/query
@@ -110,7 +198,8 @@ async function scoreImageBatch(items, description) {
       return { item, bm25Score, visualScore: null };
     }
 
-    const visualScore = await scoreImage(imageUrl, description);
+    // const visualScore = await scoreImage(imageUrl, description);
+    const visualScore = await scoreImageZotGPT(imageUrl, description);
     return { item, bm25Score, visualScore };
   });
 
@@ -135,6 +224,7 @@ function normalizeVisualScore(score) {
 
 module.exports = {
   scoreImage,
+  scoreImageZotGPT,
   scoreImageBatch,
   normalizeVisualScore,
 };

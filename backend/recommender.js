@@ -141,11 +141,11 @@ function normalizeBM25Scores(items) {
  * @param {number} limit - Max number of final results (default 20)
  * @returns {Promise<Array<{item: object, score: number, bm25Score: number, visualScore: number}>>}
  */
-async function recommendWithVisualScoring(ctx, query, filters = {}, limit = 20) {
+async function recommendWithVisualScoring(ctx, query, filters = {}, limit = 20, options = {}) {
   const topNForScoring = 10; // number of items to score visually
   
   console.log('Step 1: Getting top BM25 results...');
-  const bm25Results = recommend(ctx, query, filters, topNForScoring);
+  const bm25Results = recommend(ctx, query, filters, topNForScoring, options);
   
   if (bm25Results.length === 0) {
     return [];

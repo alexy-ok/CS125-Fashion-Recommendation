@@ -77,6 +77,30 @@
         "shirtSize": "",
         "pantsSize": ""
       }
+    ],
+    "f352b2dc-6a11-4dbe-b8d7-51f27991fa79": [
+      {
+        "id": "6f3099ba-e526-4967-aed6-8696d0e86022",
+        "title": "",
+        "description": "brown jacket",
+        "minPrice": "",
+        "maxPrice": "75",
+        "brandPreference": null,
+        "material": "",
+        "shirtSize": "",
+        "pantsSize": ""
+      },
+      {
+        "id": "6d08570e-0a39-41c7-a5a6-269fd8b2db29",
+        "title": "",
+        "description": "baggy blue jeans",
+        "minPrice": "",
+        "maxPrice": "",
+        "brandPreference": null,
+        "material": "",
+        "shirtSize": "",
+        "pantsSize": ""
+      }
     ]
   }
 }

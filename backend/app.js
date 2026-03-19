@@ -315,7 +315,7 @@ app.get('/api/item/:itemId', async (req, res) => {
  * Recommend clothing items from the indexed catalog.
  * Query params: query, minPrice, maxPrice, style, material, shirt_size, pant_size, limit
  */
-app.get('/api/recommend', (req, res) => {
+app.get('/api/recommend', async (req, res) => {
   try {
     if (!recommendationIndex) {
       return res.status(503).json({ error: 'Recommendation index not loaded' });
@@ -335,7 +335,7 @@ app.get('/api/recommend', (req, res) => {
     
     const profile = getUserModel(req.effectiveUserId) || null;
 
-    const results = recommend(
+    const results = await recommendWithVisualScoring(
       recommendationIndex, 
       query || '', 
       filters,
@@ -345,12 +345,12 @@ app.get('/api/recommend', (req, res) => {
     
     const elapsed = Date.now() - startTime;
     console.log(`Total recommendation time: ${elapsed}ms`);
-    
+    console.log("results: ", results);
     res.json({
       query: query || '',
       filters,
       count: results.length,
-      results: results.map(({ item, score, bm25Score, personal }) => ({ item, score, bm25Score, personal })),
+      results: results,
     });
   } catch (error) {
     console.error('Recommend error:', error);

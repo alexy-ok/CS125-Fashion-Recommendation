@@ -1,14 +1,18 @@
 const { tokenize } = require('./indexer');
+const { scoreImageBatch, normalizeVisualScore } = require('./visual-scorer');
 const { personalScore } = require('./personalModel');
 
-/** BM25 parameters: k1 controls term frequency saturation, b controls length normalization. */
+// BM25 parameters: k1 controls term frequency saturation, b controls length normalization.
 const BM25_K1 = 1.2;
 const BM25_B = 0.75;
 
-/**
- * BM25 IDF: log((N - n + 0.5) / (n + 0.5) + 1)
- * N = docCount, n = number of documents containing the term
- */
+// visual scoring weights for combining BM25 and visual LLM scores, must sum to 1. 
+
+const BM25_WEIGHT = 0.7;
+const VISUAL_WEIGHT = 0.3;
+
+// BM25 IDF: log((N - n + 0.5) / (n + 0.5) + 1), N = docCount, n = number of documents containing the term
+
 function bm25Idf(docCount, docFreq) {
   return Math.log((docCount - docFreq + 0.5) / (docFreq + 0.5) + 1);
 }
@@ -104,4 +108,83 @@ function recommend(ctx, query, filters = {}, limit = 20, options = {}) {
   return withPersonal.slice(0, limit);
 }
 
-module.exports = { recommend };
+/**
+ * Normalize BM25 scores to 0-1 range using min-max normalization
+ * @param {Array<{item: object, score: number}>} items - Items with BM25 scores
+ * @returns {Array<{item: object, score: number, normalizedScore: number}>}
+ */
+function normalizeBM25Scores(items) {
+  if (items.length === 0) return [];
+  
+  const scores = items.map(item => item.score);
+  const minScore = Math.min(...scores);
+  const maxScore = Math.max(...scores);
+  const range = maxScore - minScore;
+  
+  if (range === 0) {
+    return items.map(item => ({ ...item, normalizedScore: 1 }));
+  }
+  
+  return items.map(item => ({
+    ...item,
+    normalizedScore: (item.score - minScore) / range
+  }));
+}
+
+/**
+ * Recommend clothing items with visual LLM scoring.
+ * First ranks by BM25, then re-ranks top N results using visual AI scoring.
+ * 
+ * @param {object} ctx - Index context from indexer.buildIndex / loadAndBuildIndex
+ * @param {string} query - User search text (e.g. "black jacket")
+ * @param {object} filters - Optional: size, category, minPrice, maxPrice, style, material, shirt_size, pant_size
+ * @param {number} limit - Max number of final results (default 20)
+ * @returns {Promise<Array<{item: object, score: number, bm25Score: number, visualScore: number}>>}
+ */
+async function recommendWithVisualScoring(ctx, query, filters = {}, limit = 20, options = {}) {
+  const topNForScoring = 10; // number of items to score visually
+  
+  console.log('Step 1: Getting top BM25 results...');
+  const bm25Results = recommend(ctx, query, filters, topNForScoring, options);
+  
+  if (bm25Results.length === 0) {
+    return [];
+  }
+  
+  console.log(`Step 2: Visual scoring ${bm25Results.length} items...`);
+  const scoredItems = await scoreImageBatch(bm25Results, query || 'clothing');
+  
+  console.log('Step 3: Normalizing and combining scores...');
+  const normalizedBM25 = normalizeBM25Scores(bm25Results);
+  
+  const combined = scoredItems.map((item, index) => {
+    const normalizedBM25Score = normalizedBM25[index].normalizedScore;
+    const normalizedVisualScore = item.visualScore !== null 
+      ? normalizeVisualScore(item.visualScore) 
+      : 0;
+    
+    let finalScore;
+    if (item.visualScore === null) {
+      finalScore = normalizedBM25Score;
+      console.log(`Item ${item.item.docId}: Using BM25 only (visual scoring failed)`);
+    } else {
+      finalScore = (normalizedBM25Score * BM25_WEIGHT) + (normalizedVisualScore * VISUAL_WEIGHT);
+    }
+    
+    return {
+      item: item.item,
+      score: finalScore,
+      bm25Score: item.bm25Score,
+      visualScore: item.visualScore,
+      normalizedBM25Score,
+      normalizedVisualScore
+    };
+  });
+  
+  combined.sort((a, b) => b.score - a.score);
+  
+  console.log('Step 4: Returning top results');
+  return combined.slice(0, limit);
+}
+
+module.exports = { recommend, recommendWithVisualScoring };

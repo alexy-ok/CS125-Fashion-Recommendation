@@ -2,11 +2,6 @@
 
 A fashion recommendation system for CS 125 taking listings from different websites for clothing and accessories, and recommending them to the user based on several criteria.
 
-## Features
-
-- **AI-Powered Style Matching**: Uses Google Gemini AI to analyze images and match them against style descriptions
-- **eBay Product Search**: Search for fashion products on eBay with advanced filtering options
-- **Style Scoring**: Get AI-generated scores (1-5) on how well products match your desired style
 
 ## Setup Instructions
 
@@ -41,16 +36,11 @@ A fashion recommendation system for CS 125 taking listings from different websit
    npm run dev
    ```
 
-   The server will run on `http://localhost:3000`
+4. **Start frontend**
+   ```bash
+   cd frontend
+   npm run dev
+   ```
 
-## eBay Fashion Category IDs
+   The server will run on `http://localhost:5173`
 
-Common fashion category IDs you can use with the `categoryId` parameter:
-
-- `15724` - Women's Clothing
-- `1059` - Men's Clothing  
-- `3034` - Women's Shoes
-- `93427` - Men's Shoes
-- `45238` - Women's Bags & Handbags
-- `15687` - Women's Accessories
-- `4250` - Men's Accessories

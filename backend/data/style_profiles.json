@@ -94,8 +94,19 @@
     "f352b2dc-6a11-4dbe-b8d7-51f27991fa79": [
       {
         "id": "f910cc70-e486-49c3-865d-724474e7e7fb",
-        "title": "",
+        "title": "denim jacket",
         "description": "denim jacket",
+        "minPrice": "",
+        "maxPrice": "75",
+        "brandPreference": null,
+        "material": "",
+        "shirtSize": "",
+        "pantsSize": ""
+      },
+      {
+        "id": "9f6d91b1-9e2d-4436-9227-517dabd11b6c",
+        "title": "baggy jeans",
+        "description": "baggy jeans",
         "minPrice": "",
         "maxPrice": "75",
         "brandPreference": null,

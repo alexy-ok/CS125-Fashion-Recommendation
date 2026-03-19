@@ -8,8 +8,8 @@ const BM25_B = 0.75;
 
 // visual scoring weights for combining BM25 and visual LLM scores, must sum to 1. 
 
-const BM25_WEIGHT = 0.7;
-const VISUAL_WEIGHT = 0.3;
+const BM25_WEIGHT = 0.75;
+const VISUAL_WEIGHT = 0.25;
 
 // BM25 IDF: log((N - n + 0.5) / (n + 0.5) + 1), N = docCount, n = number of documents containing the term
 

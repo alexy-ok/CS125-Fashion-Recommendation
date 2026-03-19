@@ -448,20 +448,20 @@
     },
     "f352b2dc-6a11-4dbe-b8d7-51f27991fa79": {
       "likedBrands": {
-        "zara": 6,
+        "zara": 7.375,
         "pull&bear": 2.125
       },
       "likedCategories": {
-        "jacket": 8.075
+        "jacket": 8.899999999999991
       },
       "likedColors": {},
       "likedTerms": {
-        "z1975": 2,
-        "denim": 8.075,
-        "bomber": 2,
-        "jacket": 8.075,
-        "faux": 2,
-        "leather": 2,
+        "z1975": 2.3000000000000007,
+        "denim": 8.899999999999991,
+        "bomber": 2.3000000000000007,
+        "jacket": 8.899999999999991,
+        "faux": 2.5250000000000012,
+        "leather": 2.5250000000000012,
         "trucker": 2,
         "with": 3.075,
         "front": 1.0375,
@@ -501,10 +501,10 @@
         "shirt": 2.0999999999999996
       },
       "priceRange": {
-        "min": 46.1992,
-        "max": 68.207008
+        "min": 47.09214612265351,
+        "max": 69.99
       },
-      "updatedAt": 1773887040050
+      "updatedAt": 1773894354688
     }
   }
 }

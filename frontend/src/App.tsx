@@ -443,6 +443,8 @@ export default function App() {
   const [searchError, setSearchError] = useState<string>("");
   const [personalModelJson, setPersonalModelJson] = useState<string>("");
   const [isLoadingPersonalModel, setIsLoadingPersonalModel] = useState(false);
+  const [hiddenItemIds, setHiddenItemIds] = useState<Set<number>>(new Set());
+  const [lastItemId, setLastItemId] = useState<number | null>(null);
 
   const loadStyleProfiles = async () => {
     try {
@@ -539,6 +541,13 @@ export default function App() {
     if (!authUser) return;
     const pid = profileIdOverride ?? selectedProfileId;
     if (!pid) return;
+    
+    // Hide the item if it's "save" or "notMyStyle"
+    if (eventType === "save" || eventType === "notMyStyle") {
+      setHiddenItemIds(prev => new Set(prev).add(item.docId));
+      setLastItemId(item.docId);
+    }
+    
     try {
       await fetch(`${API_BASE}/profile-interaction`, {
         method: "POST",
@@ -554,6 +563,17 @@ export default function App() {
       await refreshPersonalModel();
     } catch {
       // ignore interaction failures (shouldn't block browsing)
+    }
+  };
+
+  const handleUndo = () => {
+    if (lastItemId !== null) {
+      setHiddenItemIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(lastItemId);
+        return newSet;
+      });
+      setLastItemId(null);
     }
   };
 
@@ -651,6 +671,8 @@ export default function App() {
     setIsSearching(true);
     setSearchError("");
     setSearchResults([]);
+    setHiddenItemIds(new Set());
+    setLastItemId(null);
 
     try {
       const searchQuery = buildSearchQuery(selectedProfile);
@@ -916,11 +938,25 @@ export default function App() {
 
               {!isSearching && searchResults.length > 0 && (
                 <Box mt="6">
-                  <Heading size="md" mb="4">
-                    Results ({searchResults.length})
-                  </Heading>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb="4">
+                    <Heading size="md">
+                      Results ({searchResults.filter(item => !hiddenItemIds.has(item.item.docId)).length})
+                    </Heading>
+                    {lastItemId !== null && (
+                      <Button
+                        onClick={handleUndo}
+                        size="sm"
+                        variant="outline"
+                        colorPalette="gray"
+                      >
+                        Undo
+                      </Button>
+                    )}
+                  </Box>
                   <Grid templateColumns="repeat(auto-fill, minmax(250px, 1fr))" gap="6" className="results-grid">
-                    {searchResults.map((item) => (
+                    {searchResults
+                      .filter(item => !hiddenItemIds.has(item.item.docId))
+                      .map((item) => (
                       <Box
                         key={item.item.docId}
                         borderRadius="lg"
